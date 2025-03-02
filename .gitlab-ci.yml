@@ -1,0 +1,28 @@
+name: Deploy to GitHub Main
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set Git identity
+        run: |
+          git config --global user.name "LifeVerse-Game"
+          git config --global user.email "lifeversegame@gmail.com"
+
+      - name: Push repository
+        run: |
+          git clone --depth 1 https://github.com/LifeVerse-Game/API.git target-repo
+          rsync -av --exclude='.git' ./ API/
+          cd target-repo
+          git add .
+          git commit -m "Automated deployment from source repository"
+          git push https://x-access-token:${{ secrets.GH_PAT }}@github.com/LifeVerse-Game/API.git main
