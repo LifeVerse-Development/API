@@ -1,28 +1,19 @@
-name: Deploy to GitHub Main
+stages:
+  - deploy
 
-on:
-  push:
-    branches:
-      - main
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set Git identity
-        run: |
-          git config --global user.name "LifeVerse-Game"
-          git config --global user.email "lifeversegame@gmail.com"
-
-      - name: Push repository
-        run: |
-          git clone --depth 1 https://github.com/LifeVerse-Game/API.git target-repo
-          rsync -av --exclude='.git' ./ API/
-          cd target-repo
-          git add .
-          git commit -m "Automated deployment from source repository"
-          git push https://x-access-token:${{ secrets.GH_PAT }}@github.com/LifeVerse-Game/API.git main
+deploy_to_github:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache git rsync openssh
+    - git config --global user.name "LifeVerse-Game"
+    - git config --global user.email "lifeversegame@gmail.com"
+  script:
+    - git clone --depth 1 https://oauth2:${GITHUB_TOKEN}@github.com/LifeVerse-Game/API.git target-repo
+    - rsync -av --exclude='.git' ./API/ target-repo/
+    - cd target-repo
+    - git add .
+    - git commit -m "Automated deployment from GitLab CI/CD"
+    - git push origin main
+  only:
+    - main
