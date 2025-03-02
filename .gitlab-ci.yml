@@ -1,12 +1,36 @@
 stages:
   - build
+  - test
   - deploy
 
 build:
   stage: build
   script:
     - echo "Building the project..."
-    
+    - npm install
+
+test:
+  stage: test
+  image: node:18
+  services:
+    - name: mongo
+  before_script:
+    - npm install
+  script:
+    - echo "Running ESLint..."
+    - npx eslint . --ext .ts
+
+    - echo "Checking TypeScript types..."
+    - npx tsc --noEmit
+
+    - echo "Running tests..."
+    - npm test
+
+    - echo "Generating Code Coverage Report..."
+    - npm run test:coverage
+  only:
+    - development
+
 deploy_to_github:
   stage: deploy
   image: alpine:latest
@@ -15,11 +39,30 @@ deploy_to_github:
     - git config --global user.name "LifeVerse-Game"
     - git config --global user.email "lifeversegame@gmail.com"
   script:
+    - echo "Deploying to GitHub..."
     - git clone --depth 1 https://oauth2:${GITHUB_TOKEN}@github.com/LifeVerse-Game/API.git target-repo
     - rsync -av --exclude='.git' ./API/ target-repo/
     - cd target-repo
     - git add .
     - git commit -m "Automated deployment from GitLab CI/CD"
     - git push origin main
+  only:
+    - main
+
+deploy_to_server:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh
+  script:
+    - echo "Deploying to Server via SSH..."
+    - echo "${SSH_PRIVATE_KEY}" | tr -d '\r' > id_rsa
+    - chmod 600 id_rsa
+    - ssh -o StrictHostKeyChecking=no -i id_rsa ${SSH_USER}@${SSH_HOST} << 'EOF'
+      cd /home/api
+      git pull origin main
+      npm install
+      pm2 restart api
+      EOF
   only:
     - main
