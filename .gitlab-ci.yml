@@ -1,65 +1,39 @@
 stages:
-- build
-- test
-- deploy
-- staging
-- production
-- performance
+  - deploy
 
-build:
-  stage: build
-  script:
-  - echo "Building the project..."
-  - npm install
-
-test:
-  stage: test
-  image: node:18
-  services:
-  - name: mongo
-  before_script:
-  - npm install
-  script:
-  - echo "Running ESLint..."
-  - npx eslint . --ext .ts
-  - echo "Checking TypeScript types..."
-  - npx tsc --noEmit
-  - echo "Running tests..."
-  - npm test
-  - echo "Generating Code Coverage Report..."
-  - npm run test:coverage
-  only:
-  - development
+variables:
+  GITHUB_REPO: "LifeVerse-Development/API"
+  GIT_AUTHOR_NAME: "LifeVerse-Development"
+  GIT_AUTHOR_EMAIL: "lifeversegame@gmail.com"
+  GIT_COMMITTER_NAME: "GitLab CI/CD"
+  GIT_COMMITTER_EMAIL: "gitlab-ci@example.com"
 
 deploy_to_github:
   stage: deploy
-  image: alpine:latest
-  before_script:
-  - apk add --no-cache git rsync openssh
-  - git config --global user.name "LifeVerse-Game"
-  - git config --global user.email "lifeversegame@gmail.com"
   script:
-  - echo "Deploying to GitHub..."
-  - git clone --depth 1 https://oauth2:${GITHUB_TOKEN}@github.com/LifeVerse-Game/API.git
-    target-repo
-  - rsync -av --exclude='.git' ./API/ target-repo/
-  - cd target-repo
-  - git add .
-  - git commit -m "Automated deployment from GitLab CI/CD"
-  - git push origin main
-  only:
-  - main
+    - echo "Starte Deployment nach GitHub..."
+    
+    # Git konfigurieren
+    - git config --global user.name "$GIT_AUTHOR_NAME"
+    - git config --global user.email "$GIT_AUTHOR_EMAIL"
+    
+    # GitLab-Repository klonen
+    - git clone --bare https://oauth2:${CI_JOB_TOKEN}@gitlab.com/${CI_PROJECT_PATH}.git temp-repo
+    - cd temp-repo
+    
+    # GitHub-Repository als Remote hinzufügen
+    - git remote add github https://oauth2:${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git
+    
+    # Änderungen vom GitLab-Repository holen
+    - git fetch github --tags
+    
+    # Alles nach GitHub pushen (Mit --force wird alles überschrieben)
+    - git push --force github --all
+    - git push --force github --tags
+    
+    # Temporäres Verzeichnis entfernen
+    - cd ..
+    - rm -rf temp-repo
 
-deploy_to_server:
-  stage: deploy
-  image: alpine:latest
-  before_script:
-  - apk add --no-cache openssh
-  script:
-  - echo "Deploying to Server via SSH..."
-  - echo "${SSH_PRIVATE_KEY}" | tr -d '\r' > id_rsa
-  - chmod 600 id_rsa
-  - ssh -o StrictHostKeyChecking=no -i id_rsa ${SSH_USER}@${SSH_HOST} << 'EOF' cd
-    /home/api git pull origin main npm install pm2 restart api EOF
   only:
-  - main
+    - main
