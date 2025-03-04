@@ -1,1 +1,17 @@
-# Changelog
+CHANGELOG (API)
+
+All changes in the LifeVerse API project are documented here.
+
+[1.0.0] - YYYY-MM-DD
+  Added:
+    First release of the LifeVerse API.
+    All core endpoints and functionalities.
+  Changed:
+    Changes to the API structure and optimizations.
+  Fixed:
+    All bugs and issues fixed in this version.
+
+[0.1.0] - YYYY-MM-DD
+  Added:
+    Initial version of core API functionalities.
+    Setup of data models and database connections.
