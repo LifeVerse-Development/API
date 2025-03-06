@@ -38,7 +38,7 @@ dotenv.config();
 
 const io = new Server(server, {
     cors: {
-        origin: ['https://www.lifeversegame.com'],
+        origin: ['https://www.lifeversegame.com', 'https://localhost:3000', 'http://localhost:3001'],
         methods: ['GET', 'POST'],
         credentials: true
     }
@@ -65,7 +65,8 @@ app.use(maintenanceMiddleware());
 app.use(session({
     secret: 'some random secret',
     cookie: {
-        maxAge: 60000 * 60 * 24
+        maxAge: 60000 * 60 * 24,
+        secure: false
     },
     resave: false,
     saveUninitialized: false,

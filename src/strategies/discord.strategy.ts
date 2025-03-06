@@ -30,7 +30,7 @@ passport.use(new DiscordStrategy({
     clientSecret: config.discord.clientSecret,
     callbackURL: config.discord.callbackUrl,
     scope: ['identify', 'email']
-}, async (_accessToken, _refreshToken, profile, done) => {
+}, async (accessToken, refreshToken, profile, done) => {
     try {
         logger.info('Discord OAuth callback', { discordUserId: profile.id, username: profile.username });
 
@@ -41,16 +41,16 @@ passport.use(new DiscordStrategy({
                 username: profile.username,
                 userId: profile.id,
                 socketId: '',
-                accessToken: _accessToken,
-                refreshToken: _refreshToken,
+                accessToken: accessToken,
+                refreshToken: refreshToken,
             });
             await user.save();
             logger.info('New user created', { userId: user.id });
             return done(null, user);
         } else {
             logger.info('User found, updating tokens', { userId: user.id });
-            user.accessToken = _accessToken;
-            user.refreshToken = _refreshToken;
+            user.accessToken = accessToken;
+            user.refreshToken = refreshToken;
             await user.save();
             return done(null, user);
         }

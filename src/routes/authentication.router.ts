@@ -1,29 +1,49 @@
-import { Router, Request, Response } from 'express';
-import passport from 'passport';
-import { isAuthenticated } from '../middlewares/authentication.middleware';
+import { Router, Request, Response } from "express";
+import passport from "passport";
+import { isAuthenticated } from "../middlewares/authentication.middleware";
 
 const router = Router();
 
-router.get('/discord', passport.authenticate('discord'));
+interface DiscordUser {
+    id: string;
+    role: string;
+    profilePicture: string;
+    username: string;
+    fullName: string;
+}
 
-router.get('/discord/callback', passport.authenticate('discord', { failureRedirect: `/`, successRedirect: 'http://localhost:3000/dashboard' }));
+declare module "express-session" {
+    interface Session {
+        user?: DiscordUser;
+    }
+}
 
-router.get('/logout', isAuthenticated, (req, res, next) => {
-    req.logout((err: any) => {
+router.get("/discord", passport.authenticate("discord"));
+
+router.get("/discord/callback", passport.authenticate("discord", { failureRedirect: `/` }),
+    (req: Request, res: Response) => {
+        if (!req.user) {
+            res.status(401).json({ message: "Authentication failed" });
+            return;
+        }
+
+        const user = req.user as DiscordUser;
+        req.session.user = user;
+
+        res.redirect(
+            `http://localhost:3000/login?user=${encodeURIComponent(JSON.stringify(user))}`
+        );
+    }
+);
+
+router.get("/logout", isAuthenticated, (req, res, next) => {
+    req.session.destroy((err) => {
         if (err) {
             return next(err);
         }
-        const redirectTo = req.get('Referer') || '/';
-        res.redirect(redirectTo);
+        res.clearCookie("connect.sid");
+        res.redirect("/");
     });
-});
-
-router.get('/profile', isAuthenticated, (req: Request, res: Response): void => {
-    if (req.user) {
-        res.json(req.user);
-    } else {
-        res.status(400).json({ message: 'User not found' });
-    }
 });
 
 export default router;
