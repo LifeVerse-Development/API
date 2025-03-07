@@ -42,6 +42,7 @@ export class PaymentGatewayService {
             }
 
             const newPayment = new Payment({
+                identifier: Math.random().toString(36).substring(2, 15),
                 paymentMethod: paymentData.paymentMethod,
                 amount: paymentData.amount,
                 currency: paymentData.currency,

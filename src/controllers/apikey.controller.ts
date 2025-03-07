@@ -19,6 +19,7 @@ export const createApiKey: RequestHandler = async (req: Request, res: Response):
         }
 
         const newApiKey = new ApiKey({
+            identifier: Math.random().toString(36).substring(2, 15),
             name,
             key,
             user,

@@ -19,6 +19,7 @@ export const createBetaKey: RequestHandler = async (req: Request, res: Response)
         }
 
         const newBetaKey = new BetaKey({
+            identifier: Math.random().toString(36).substring(2, 15),
             name,
             key,
             expireAt,

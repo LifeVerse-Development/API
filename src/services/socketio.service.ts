@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import { Schema } from 'mongoose';
 import { Server, Socket } from 'socket.io';
 import { User, IUser } from '../models/User';
 import { Chat } from '../models/Chat';
@@ -44,26 +44,29 @@ export class SocketIOService {
             if (recipientSocketId) {
                 const sender = await User.findOne({ socketId: socket.id });
                 const recipient = await User.findOne({ socketId: recipientSocketId });
-    
+            
                 if (sender && recipient) {
                     let chat = await Chat.findOne({ participants: { $all: [sender._id, recipient._id] }, chatType: 'one-to-one' });
                     if (!chat) {
                         chat = new Chat({
                             participants: [sender._id, recipient._id],
                             chatType: 'one-to-one',
-                            createdAt: new Date()
+                            createdAt: new Date(),
+                            updatedAt: new Date()
                         });
                         await chat.save();
                     }
-
+    
                     const newMessage = {
-                        sender: sender._id as mongoose.Types.ObjectId,
+                        identifier: Math.random().toString(36).substring(2, 15),
+                        sender: sender._id as Schema.Types.ObjectId,
                         content: message,
                         timestamp: new Date()
                     };
+    
                     chat.messages.push(newMessage);
                     await chat.save();
-    
+            
                     this.io.to(recipientSocketId).emit('private-message', {
                         from: sender.username,
                         message
@@ -81,7 +84,8 @@ export class SocketIOService {
                 participants: [socket.id],
                 chatType: 'group',
                 groupName,
-                createdAt: new Date()
+                createdAt: new Date(),
+                updatedAt: new Date()
             });
             await groupChat.save();
             this.groups[groupName] = [socket.id];
@@ -98,7 +102,7 @@ export class SocketIOService {
             if (group) {
                 const user = await User.findOne({ socketId: socket.id }) as IUser | null;
     
-                if (user && user._id instanceof mongoose.Types.ObjectId) {
+                if (user && user._id instanceof Schema.Types.ObjectId) {
                     group.participants.push(user._id); 
                     await group.save();
                     socket.join(groupName);
@@ -118,7 +122,12 @@ export class SocketIOService {
             if (group) {
                 const sender = await User.findOne({ socketId: socket.id });
                 if (sender) {
-                    const newMessage = { sender: sender._id as mongoose.Types.ObjectId, content: message, timestamp: new Date() };
+                    const newMessage = {
+                        identifier: Math.random().toString(36).substring(2, 15),
+                        sender: sender._id as Schema.Types.ObjectId,
+                        content: message,
+                        timestamp: new Date()
+                    };
                     group.messages.push(newMessage);
                     await group.save();
 

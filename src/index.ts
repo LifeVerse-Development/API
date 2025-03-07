@@ -39,7 +39,7 @@ dotenv.config();
 const io = new Server(server, {
     cors: {
         origin: ['https://www.lifeversegame.com', 'https://localhost:3000', 'http://localhost:3001'],
-        methods: ['GET', 'POST'],
+        methods: ['GET', 'POST', 'UPDATE', 'DELETE', 'PATCH', 'OPTIONS'],
         credentials: true
     }
 });
@@ -54,7 +54,7 @@ app.use(hppMiddleware());
 app.use(helmetMiddleware());
 app.use(mongoSanitize());
 app.use(bodyParserMiddleware());
-app.use(corsMiddleware());
+app.use(corsMiddleware);
 app.use(slowDownMiddleware());
 app.use(csrfMiddleware());
 app.use(rateLimitMiddleware());
@@ -102,3 +102,5 @@ server.listen(PORT, () => {
     console.log(`API is running securely with WebSockets on port ${PORT}`);
     socketService;
 });
+
+export default app;

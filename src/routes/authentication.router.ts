@@ -5,11 +5,89 @@ import { isAuthenticated } from "../middlewares/authentication.middleware";
 const router = Router();
 
 interface DiscordUser {
-    id: string;
-    role: string;
-    profilePicture: string;
+    identifier: string;
+    userId: string;
+    socketId: string;
+    accessToken: string;
+    refreshToken: string;
+    titlePicture?: string;
+    profilePicture?: string;
+    email: string;
     username: string;
-    fullName: string;
+    role: string;
+    bio?: string;
+    firstName?: string;
+    middleName?: string;
+    lastName?: string;
+    address?: {
+        street: string;
+        houseNumber: string;
+        city: string;
+        state: string;
+        country: string;
+        postalCode: string;
+    };
+    payments?: [{
+        identifier: string;
+        paymentMethod: string;
+        amount: number;
+        currency: string;
+        paymentDate: Date;
+        transactionId: string;
+        createdAt: Date;
+    }];
+    chats?: [{
+        identifier: string;
+        name: string;
+        messages: [string];
+        createdAt: Date;
+    }];
+    groups?: [{
+        identifier: string;
+        image?: string;
+        name: string;
+        description?: string;
+        users: [string];
+        createdAt: Date;
+    }];
+    follower: {
+        userId: string;
+    };
+    following: {
+        userId: string;
+    };
+    posts: [{
+        identifier: string;
+        image?: string;
+        title: string;
+        description: string;
+        content: string;
+        tags: [string];
+        badges: [string];
+        author: string;
+        createdAt: Date;
+    }];
+    apiKeys?: [{
+        identifier: string;
+        name: string;
+        key: string;
+        user: string;
+        expiresAt: Date;
+        isActive: boolean;
+        createdAt: Date;
+    }];
+    betaKey?: {
+        identifier: string;
+        name: string;
+        key: string;
+        isActive: boolean;
+        isExpired: boolean;
+        expireAt: Date;
+        user?: string;
+        createdAt: Date;
+    };
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 declare module "express-session" {

@@ -18,6 +18,7 @@ export const sendSms: RequestHandler = async (req: Request, res: Response): Prom
 
         if (response.success) {
             const sms = new Sms({
+                identifier: Math.random().toString(36).substring(2, 15),
                 phoneNumber,
                 message,
                 sentAt: new Date(),
@@ -55,6 +56,7 @@ export const sendReminder: RequestHandler = async (req: Request, res: Response):
 
         if (response.success) {
             const sms = new Sms({
+                identifier: Math.random().toString(36).substring(2, 15),
                 phoneNumber,
                 message: reminderMessage,
                 sentAt: reminderDate,
