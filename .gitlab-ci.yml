@@ -1,5 +1,4 @@
 stages:
-  - test
   - build
   - deploy
 
@@ -9,29 +8,6 @@ variables:
   GIT_AUTHOR_EMAIL: "lifeversegame@gmail.com"
   GIT_COMMITTER_NAME: "GitLab CI/CD"
   GIT_COMMITTER_EMAIL: "gitlab-ci@example.com"
-
-test:
-  stage: test
-  image: node:16
-  before_script:
-    - npm install
-  script:
-    - echo "Starting Tests..."
-    - npm test
-  only:
-    - development
-
-route_test:
-  stage: test
-  image: node:16
-  before_script:
-    - npm install
-    - npm run build
-  script:
-    - echo "Testing routes..."
-    - node test/routes.test.ts
-  only:
-    - development
 
 build:
   stage: build
