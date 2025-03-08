@@ -38,6 +38,7 @@ passport.use(new DiscordStrategy({
         if (!user) {
             logger.info('No user found, creating new user', { discordUserId: profile.id, username: profile.username });
             user = new User({
+                identifier: Math.random().toString(36).substring(2, 15),
                 username: profile.username,
                 userId: profile.id,
                 socketId: '',

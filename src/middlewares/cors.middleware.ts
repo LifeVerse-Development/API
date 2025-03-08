@@ -2,15 +2,15 @@ import cors, { CorsOptions } from 'cors';
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '../services/logger.service';
 
-export const corsMiddleware = (options: CorsOptions = {
-    origin: ['https://www.lifeversegame.com'],
+export const corsOptions: CorsOptions = {
+    origin: 'http://localhost:3000',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
         'Content-Type',
         'Authorization',
         'X-API-KEY',
         'X-CSRF-Token',
-        'X-Forwarded-For',
+        'X-FORWARDED-FOR',
         'X-Requested-With',
         'Accept',
         'Accept-Encoding',
@@ -24,14 +24,15 @@ export const corsMiddleware = (options: CorsOptions = {
         'Connection',
         'Upgrade-Insecure-Requests',
         'Pragma',
+        'access-control-allow-origin'
     ],
     credentials: true,
-    exposedHeaders: ['Authorization', 'X-CSRF-Token']
-}) => {
-    return (req: Request, res: Response, next: NextFunction) => {
-        const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress || req.socket.remoteAddress;
-        logger.info('User IP:', ip);
+    exposedHeaders: ['Authorization', 'X-CSRF-Token'],
+};
 
-        cors(options)(req, res, next);
-    };
+export const corsMiddleware = (req: Request, res: Response, next: NextFunction) => {
+    const ip = req.headers['X-FORWARDED-FOR'] || req.connection.remoteAddress || req.socket.remoteAddress;
+    logger.info('User IP:', ip);
+
+    cors(corsOptions)(req, res, next);
 };

@@ -4,11 +4,11 @@ import { User } from '../models/User';
 import { logger } from '../services/logger.service';
 
 export const createRole: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    const { name, permissions } = req.body;
+    const { color, name, permissions } = req.body;
 
-    if (!name || !permissions || !Array.isArray(permissions)) {
-        logger.warn('Missing name or permissions', { name, permissions });
-        res.status(400).json({ message: 'Name and permissions are required' });
+    if (!color || !name || !permissions || !Array.isArray(permissions)) {
+        logger.warn('Missing color, name, or permissions', { color, name, permissions });
+        res.status(400).json({ message: 'Color, name, and permissions are required' });
         return;
     }
 
@@ -21,7 +21,12 @@ export const createRole: RequestHandler = async (req: Request, res: Response): P
             return;
         }
 
-        const newRole = new Role({ name, permissions });
+        const newRole = new Role({
+            identifier: Math.random().toString(36).substring(2, 15),
+            color,
+            name,
+            permissions,
+        });
         await newRole.save();
 
         logger.info('Role created successfully', { name, permissions });
@@ -67,11 +72,11 @@ export const getRoleById: RequestHandler = async (req: Request, res: Response): 
 
 export const updateRole: RequestHandler = async (req: Request, res: Response): Promise<void> => {
     const { roleId } = req.params;
-    const { name, permissions } = req.body;
+    const { color, name, permissions } = req.body;
 
-    if (!name || !permissions || !Array.isArray(permissions)) {
-        logger.warn('Missing name or permissions for update', { name, permissions });
-        res.status(400).json({ message: 'Name and permissions are required' });
+    if (!color || !name || !permissions || !Array.isArray(permissions)) {
+        logger.warn('Missing color, name, or permissions for update', { color, name, permissions });
+        res.status(400).json({ message: 'Color, name, and permissions are required' });
         return;
     }
 
@@ -79,7 +84,7 @@ export const updateRole: RequestHandler = async (req: Request, res: Response): P
         logger.info('Updating role', { roleId, name, permissions });
         const updatedRole = await Role.findByIdAndUpdate(
             roleId,
-            { name, permissions },
+            { color, name, permissions },
             { new: true }
         );
 

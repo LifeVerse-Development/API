@@ -1,17 +1,33 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import { Schema, model, Document } from 'mongoose';
+
+interface IPost {
+    identifier: string;
+    image: string;
+    title: string;
+    description: string;
+    content: string;
+    tags: string[];
+    badges: string[];
+    author: string;
+    createdAt: Date;
+}
 
 export interface IUser extends Document {
-    username: string;
+    identifier: string;
     userId: string;
     socketId: string;
     accessToken: string;
     refreshToken: string;
+    titlePicture?: string;
+    profilePicture?: string;
+    email?: string;
+    username: string;
     role: string;
-    email: string;
-    firstName: string;
-    middleName: string;
-    lastName: string;
-    address: {
+    bio?: string;
+    firstName?: string;
+    middleName?: string;
+    lastName?: string;
+    address?: {
         street: string;
         houseNumber: string;
         city: string;
@@ -19,23 +35,31 @@ export interface IUser extends Document {
         country: string;
         postalCode: string;
     };
-    payments: mongoose.Types.ObjectId[];
-    chats: mongoose.Types.ObjectId[];
-    groups: mongoose.Types.ObjectId[];
-    apiKeys: mongoose.Types.ObjectId[];
-    betaKey: mongoose.Types.ObjectId;
+    payments: Schema.Types.ObjectId[];
+    stripeCustomerId?: string;
+    chats: Schema.Types.ObjectId[];
+    groups: Schema.Types.ObjectId[];
+    follower?: string[];
+    following?: string[];
+    posts?: IPost[];
+    apiKeys: Schema.Types.ObjectId[];
+    betaKey: Schema.Types.ObjectId;
     createdAt: Date;
     updatedAt: Date;
 }
 
 const userSchema = new Schema<IUser>({
-    username: { type: String, required: true },
-    userId: { type: String, required: true },
-    socketId: { type: String, default: '' },
+    identifier: { type: String, required: true, unique: true },
+    userId: { type: String, required: true, unique: true },
+    socketId: { type: String, default: '', unique: true },
     accessToken: { type: String, required: true },
-    refreshToken: { type: String, required: true },
-    role: { type: String, default: 'Member', required: true },
+    refreshToken: { type: String, required: true, unique: true },
+    titlePicture: { type: String, default: '' },
+    profilePicture: { type: String, default: '' },
     email: { type: String, default: '' },
+    username: { type: String, required: true },
+    role: { type: String, default: 'Member', required: true },
+    bio: { type: String, default: '' },
     firstName: { type: String, default: '' },
     middleName: { type: String, default: '' },
     lastName: { type: String, default: '' },
@@ -47,16 +71,38 @@ const userSchema = new Schema<IUser>({
         country: { type: String, default: '' },
         postalCode: { type: String, default: '' },
     },
-    payments: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Payment' }],
-    chats: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Chat' }],
-    groups: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Chat' }],
-    apiKeys: [{ type: mongoose.Schema.Types.ObjectId, ref: 'ApiKey' }],
-    betaKey: { type: mongoose.Schema.Types.ObjectId, ref: 'BetaKey' },
+    payments: [{ type: Schema.Types.ObjectId, ref: 'Payment' }],
+    stripeCustomerId: { type: String, default: null },
+    chats: [{ type: Schema.Types.ObjectId, ref: 'Chat' }],
+    groups: [{ type: Schema.Types.ObjectId, ref: 'Chat' }],
+    follower: { type: [String], default: [] },
+    following: { type: [String], default: [] },
+    posts: [{ type: Schema.Types.ObjectId, ref: 'Post' }],
+    apiKeys: [{ type: Schema.Types.ObjectId, ref: 'ApiKey' }],
+    betaKey: { type: Schema.Types.ObjectId, ref: 'BetaKey' },
 }, { timestamps: true });
+
+userSchema.pre('save', function (next) {
+    if (!this.identifier) {
+        this.identifier = Math.random().toString(36).substring(2, 15);
+    }
+    next();
+});
+
+userSchema.pre('save', function (next) {
+    if (this.posts && Array.isArray(this.posts)) {
+        this.posts.forEach(post => {
+            if (!post.identifier) {
+                post.identifier = Math.random().toString(36).substring(2, 15);
+            }
+        });
+    }
+    next();
+});
 
 userSchema.pre<IUser>('save', function (next) {
     this.updatedAt = new Date();
     next();
 });
 
-export const User = mongoose.model<IUser>('User', userSchema);
+export const User = model<IUser>('User', userSchema);

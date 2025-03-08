@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IApiKey extends Document {
+    identifier: string;
     name: string;
     key: string;
     user: mongoose.Types.ObjectId;
@@ -13,6 +14,7 @@ export interface IApiKey extends Document {
 }
 
 const apiKeySchema = new Schema<IApiKey>({
+    identifier: { type: String, required: true, unique: true },
     name: { type: String, required: true },
     key: { type: String, required: true, unique: true },
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -28,5 +30,12 @@ apiKeySchema.methods.deactivate = async function () {
 apiKeySchema.methods.isExpired = function (): boolean {
     return new Date() > this.expiresAt;
 };
+
+apiKeySchema.pre('save', function (next) {
+    if (!this.identifier) {
+        this.identifier = Math.random().toString(36).substring(2, 15);
+    }
+    next();
+});
 
 export const ApiKey = mongoose.model<IApiKey>('ApiKey', apiKeySchema);

@@ -23,7 +23,13 @@ export const sendEmail = async (to: string, subject: string, text: string, html:
 
         await transporter.sendMail(mailOptions);
 
-        const email = new Email({ to, subject, text, html });
+        const email = new Email({
+            identifier: Math.random().toString(36).substring(2, 15),
+            to,
+            subject,
+            text,
+            html,
+        });
         await email.save();
 
         return email;

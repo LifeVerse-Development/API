@@ -1,7 +1,8 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import { Schema, model, Document } from 'mongoose';
 
 export interface IChat extends Document {
-    participants: mongoose.Types.ObjectId[];
+    identifier: string;
+    participants: Schema.Types.ObjectId[];
     messages: IMessage[];
     chatType: 'group' | 'one-to-one';
     groupName?: string;
@@ -10,22 +11,39 @@ export interface IChat extends Document {
 }
 
 export interface IMessage {
-    sender: mongoose.Types.ObjectId;
+    identifier: string;
+    sender: Schema.Types.ObjectId;
     content: string;
     timestamp: Date;
 }
 
 const messageSchema = new Schema<IMessage>({
-    sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    identifier: { type: String, required: true, unique: true },
+    sender: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     content: { type: String, required: true },
     timestamp: { type: Date, default: Date.now }
 });
 
 const chatSchema = new Schema<IChat>({
-    participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }],
+    identifier: { type: String, required: true, unique: true },
+    participants: [{ type: Schema.Types.ObjectId, ref: 'User', required: true }],
     messages: [messageSchema],
     chatType: { type: String, enum: ['group', 'one-to-one'], required: true },
     groupName: { type: String },
 }, { timestamps: true });
 
-export const Chat = mongoose.model<IChat>('Chat', chatSchema);
+messageSchema.pre('save', function (next) {
+    if (!this.identifier) {
+        this.identifier = Math.random().toString(36).substring(2, 15);
+    }
+    next();
+});
+
+chatSchema.pre('save', function (next) {
+    if (!this.identifier) {
+        this.identifier = Math.random().toString(36).substring(2, 15);
+    }
+    next();
+});
+
+export const Chat = model<IChat>('Chat', chatSchema);

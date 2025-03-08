@@ -1,19 +1,23 @@
 import { Request, Response, NextFunction } from 'express';
-import { User } from '../models/User';
 import { logger } from '../services/logger.service';
 
-export const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
-    const user = req.user;
+export const isAuthenticated = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const accessToken = req.headers['authorization']?.split(' ')[1];
+    const isAuthenticatedHeader = req.headers['x-is-authenticated'];
 
-    if (req.isAuthenticated()) {
-        return next();
+    if (!accessToken) {
+        logger.warn('Tokens missing', { ip: req.ip, headers: req.headers });
+        res.status(401).json({ message: 'Unauthorized' });
+        return;
     }
 
-    if (user instanceof User) {
-        logger.info('User authenticated', { userId: user.id });
-        return next();
+    if (isAuthenticatedHeader !== 'true') {
+        logger.warn('User not authenticated in header', { ip: req.ip, headers: req.headers });
+        res.status(401).json({ message: 'Unauthorized' });
+        return;
     }
 
-    logger.warn('User not authenticated', { ip: req.ip, headers: req.headers });
-    res.status(401).json({ message: 'Unauthorized' });
+    logger.info('User authenticated from header', { ip: req.ip });
+
+    next();
 };

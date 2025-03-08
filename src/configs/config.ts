@@ -27,6 +27,7 @@ export const config = {
     gateways: {
         payment: {
             stripe: String(process.env.STRIPE_SECRET_KEY),
+            stripeWebhookSecret: String(process.env.STRIPE_WEBHOOK_SECRET),
         },
         sms: {
             accountSid: String(process.env.TWILIO_ACCOUNT_SID),
