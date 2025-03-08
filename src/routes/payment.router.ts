@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import express, { Router } from 'express';
 import { createPayment, createSubscription, getPaymentDetails, handleStripeWebhook, getAllPayments, getPaymentById, deletePayment } from '../controllers/payment.controller';
 import { hasRole } from '../middlewares/authorization.middleware';
 import { isAuthenticated } from '../middlewares/authentication.middleware';
@@ -12,6 +12,6 @@ router.get('/:paymentId', isAuthenticated, hasRole('Admin', 'Moderator', 'Develo
 router.get('/details/:sessionId', isAuthenticated, getPaymentDetails);
 router.delete('/:paymentId', isAuthenticated, hasRole('Admin', 'Moderator'), deletePayment);
 
-router.post('/webhook', handleStripeWebhook);
+router.post('/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
 
 export default router;
