@@ -7,6 +7,7 @@ export interface IPayment extends Document {
     currency: string;
     paymentDate: Date;
     transactionId?: string;
+    status: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -17,7 +18,8 @@ const paymentSchema = new Schema<IPayment>({
     amount: { type: Number, required: true },
     currency: { type: String, required: true },
     paymentDate: { type: Date, required: true },
-    transactionId: { type: String, default: '' }
+    transactionId: { type: String, default: '' },
+    status: { type: String, required: true },
 }, { timestamps: true });
 
 paymentSchema.pre('save', function (next) {

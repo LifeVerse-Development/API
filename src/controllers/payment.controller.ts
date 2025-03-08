@@ -7,17 +7,70 @@ export const createPayment: RequestHandler = async (req: Request, res: Response)
         logger.info('Processing payment request', { body: req.body });
 
         const result = await PaymentGatewayService.processPayment(req.body);
-
+        
         if (!result.success) {
             logger.warn('Payment processing failed', { message: result.message });
-            res.status(400).json({ message: result.message });
+            res.status(400).json({ message: result.message, error: result.error });
             return;
         }
 
-        logger.info('Payment processed successfully');
+        logger.info('Payment processed successfully', { sessionId: result.sessionId });
         res.status(201).json(result);
     } catch (error: any) {
         logger.error('Error processing payment', { error: error.message, stack: error.stack });
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const createSubscription: RequestHandler = async (req: Request, res: Response): Promise<void> => {
+    try {
+        logger.info('Processing subscription request', { body: req.body });
+
+        const result = await PaymentGatewayService.createSubscription(req.body);
+        
+        if (!result.success) {
+            logger.warn('Subscription processing failed', { message: result.message });
+            res.status(400).json({ message: result.message, error: result.error });
+            return;
+        }
+
+        logger.info('Subscription created successfully', { sessionId: result.sessionId });
+        res.status(201).json(result);
+    } catch (error: any) {
+        logger.error('Error processing subscription', { error: error.message, stack: error.stack });
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const getPaymentDetails: RequestHandler = async (req: Request, res: Response): Promise<void> => {
+    const { sessionId } = req.params;
+    
+    try {
+        logger.info('Fetching payment details', { sessionId });
+
+        const result = await PaymentGatewayService.getPaymentDetails(sessionId);
+        const status = result.success ? 200 : 404;
+
+        if (!result.success) {
+            logger.warn('Failed to fetch payment details', { sessionId, message: result.message });
+        }
+
+        res.status(status).json(result);
+    } catch (error: any) {
+        logger.error('Error fetching payment details', { sessionId, error: error.message, stack: error.stack });
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const handleStripeWebhook: RequestHandler = async (req: Request, res: Response): Promise<void> => {
+    const event: any = req.body;
+    
+    try {
+        logger.info('Processing Stripe webhook event', { eventType: event.type });
+        await PaymentGatewayService.handleStripeWebhook(event);
+        res.status(200).send('Webhook received');
+    } catch (error: any) {
+        logger.error('Error processing Stripe webhook', { error: error.message, stack: error.stack });
         res.status(500).json({ message: 'Internal server error' });
     }
 };
@@ -29,9 +82,7 @@ export const getAllPayments: RequestHandler = async (_req: Request, res: Respons
         const result = await PaymentGatewayService.getAllPayments();
         const status = result.success ? 200 : 400;
 
-        if (result.success) {
-            logger.info('Payments fetched successfully');
-        } else {
+        if (!result.success) {
             logger.warn('Failed to fetch payments', { message: result.message });
         }
 
@@ -51,9 +102,7 @@ export const getPaymentById: RequestHandler = async (req: Request, res: Response
         const result = await PaymentGatewayService.getPaymentById(paymentId);
         const status = result.success ? 200 : 404;
 
-        if (result.success) {
-            logger.info('Payment fetched successfully');
-        } else {
+        if (!result.success) {
             logger.warn('Payment not found', { paymentId });
         }
 
@@ -73,9 +122,7 @@ export const deletePayment: RequestHandler = async (req: Request, res: Response)
         const result = await PaymentGatewayService.deletePayment(paymentId);
         const status = result.success ? 200 : 404;
 
-        if (result.success) {
-            logger.info('Payment deleted successfully', { paymentId });
-        } else {
+        if (!result.success) {
             logger.warn('Payment not found for deletion', { paymentId });
         }
 

@@ -36,6 +36,7 @@ export interface IUser extends Document {
         postalCode: string;
     };
     payments: Schema.Types.ObjectId[];
+    stripeCustomerId?: string;
     chats: Schema.Types.ObjectId[];
     groups: Schema.Types.ObjectId[];
     follower?: string[];
@@ -71,6 +72,7 @@ const userSchema = new Schema<IUser>({
         postalCode: { type: String, default: '' },
     },
     payments: [{ type: Schema.Types.ObjectId, ref: 'Payment' }],
+    stripeCustomerId: { type: String, default: null },
     chats: [{ type: Schema.Types.ObjectId, ref: 'Chat' }],
     groups: [{ type: Schema.Types.ObjectId, ref: 'Chat' }],
     follower: { type: [String], default: [] },
