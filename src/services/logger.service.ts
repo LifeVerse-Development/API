@@ -2,7 +2,7 @@ import winston from 'winston';
 import path from 'path';
 import fs from 'fs';
 import { sendToDiscord } from '../utils/sendToDiscord.util';
-import { config } from '../configs/config';
+import { application } from '../configs/application.config';
 
 const logDirectory = path.join(__dirname, '../../logs');
 
@@ -11,7 +11,7 @@ if (!fs.existsSync(logDirectory)) {
 }
 
 export const logger = winston.createLogger({
-    level: config.application.env === 'production' ? 'info' : 'debug',
+    level: application.env === 'production' ? 'info' : 'debug',
     format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.json(),
@@ -37,7 +37,7 @@ export const logger = winston.createLogger({
                 winston.format.colorize(),
                 winston.format.simple()
             ),
-            level: config.application.env === 'production' ? 'info' : 'debug',
+            level: application.env === 'production' ? 'info' : 'debug',
         }),
     ],
 });

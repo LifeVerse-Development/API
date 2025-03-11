@@ -1,10 +1,11 @@
 import Stripe from "stripe";
 import type { Request, Response, RequestHandler } from "express";
 import { Payment } from "../models/Payment";
-import { config } from "../configs/config";
+import { config } from "../configs/main.config";
+import { gateway } from "../configs/gateway.config";
 import { logger } from "../services/logger.service";
 
-const stripe = new Stripe(config.gateways.payment.stripe, {
+const stripe = new Stripe(gateway.payment.stripe, {
     apiVersion: "2025-02-24.acacia",
 });
 

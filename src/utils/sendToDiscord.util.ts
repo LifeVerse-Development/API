@@ -1,8 +1,8 @@
 import axios from 'axios';
-import { config } from '../configs/config';
+import { discord } from '../configs/discord.config';
 import { logger } from '../services/logger.service';
 
-const DISCORD_WEBHOOK_URL = config.discord.webhook.logUrl;
+const DISCORD_WEBHOOK_URL = discord.webhook.logUrl;
 
 export const sendToDiscord = async (message: string, level: 'info' | 'warn' | 'error') => {
     try {

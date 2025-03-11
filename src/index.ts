@@ -6,7 +6,7 @@ import passport from 'passport';
 import session from 'express-session';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import { config } from './configs/config';
+import { application } from './configs/application.config';
 import { connectDB } from './database/connectDB';
 import { jsonErrorHandler, notFoundHandler, globalErrorHandler } from './middlewares/errorHandler.middleware';
 import { SocketIOService } from './services/socketio.service';
@@ -35,6 +35,8 @@ import maintenanceRouter from './routes/maintenance.router';
 import friendRouter from './routes/friend.router';
 import emailRouter from './routes/email.router';
 import contactRouter from './routes/contact.router';
+import historyRouter from './routes/history.router';
+import uploadRouter from './routes/upload.router';
 
 const app = express();
 const server = createServer(app);
@@ -51,7 +53,7 @@ const io = new Server(server, {
 
 const socketService = new SocketIOService(io);
 
-const PORT = config.application.port || 3000;
+const PORT = application.port || 3000;
 
 connectDB();
 
@@ -100,6 +102,8 @@ app.use('/api/payments', paymentRouter);
 app.use('/api/blogs', blogRouter);
 app.use('/api/emails', emailRouter);
 app.use('/api/contacts', contactRouter);
+app.use('/api/histories', historyRouter);
+app.use('/api/uploads', uploadRouter);
 
 // Error handling middleware
 app.use(jsonErrorHandler);

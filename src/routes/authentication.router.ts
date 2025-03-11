@@ -2,7 +2,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import passport from "passport";
 import { isAuthenticated } from "../middlewares/authentication.middleware";
 import { logger } from "../services/logger.service";
-import { config } from "../configs/config";
+import { config } from "../configs/main.config";
 
 const router = Router();
 

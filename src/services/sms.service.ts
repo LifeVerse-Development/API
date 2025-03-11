@@ -1,15 +1,15 @@
 import { Twilio } from 'twilio';
-import { config } from '../configs/config';
+import { gateway } from '../configs/gateway.config';
 import { logger } from '../services/logger.service';
 
-const twilioClient = new Twilio(config.gateways.sms.accountSid, config.gateways.sms.authToken);
+const twilioClient = new Twilio(gateway.sms.accountSid, gateway.sms.authToken);
 
 export class SmsService {
     static async sendSms(to: string, message: string) {
         try {
             const messageResponse = await twilioClient.messages.create({
                 body: message,
-                from: config.gateways.sms.phoneNumber,
+                from: gateway.sms.phoneNumber,
                 to,
             });
 
@@ -24,7 +24,7 @@ export class SmsService {
         try {
             const messageResponse = await twilioClient.messages.create({
                 body: reminderMessage,
-                from: config.gateways.sms.phoneNumber,
+                from: gateway.sms.phoneNumber,
                 to,
                 sendAt: sendAt,
             });

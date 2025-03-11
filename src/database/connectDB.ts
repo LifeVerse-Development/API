@@ -1,8 +1,8 @@
 import mongoose from 'mongoose';
-import { config } from '../configs/config';
+import { database } from '../configs/database.config';
 import { logger } from '../services/logger.service';
 
-const mongoUri = config.database.mongoUri;
+const mongoUri = database.mongoUri;
 
 export const connectDB = async (): Promise<void> => {
     try {

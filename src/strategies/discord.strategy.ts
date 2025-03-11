@@ -1,15 +1,15 @@
 import passport from 'passport';
 import { Strategy as DiscordStrategy } from 'passport-discord';
 import { User } from '../models/User';
-import { config } from '../configs/config';
+import { discord } from '../configs/discord.config';
 import { logger } from '../services/logger.service';
 
 passport.serializeUser((user: any, done) => {
     try {
-        logger.info('🔄 Serializing user', { userId: user.id });
+        logger.info('Serializing user', { userId: user.id });
         done(null, user.id);
     } catch (error) {
-        logger.error('❌ Error during user serialization', { error });
+        logger.error('Error during user serialization', { error });
         done(error);
     }
 });
@@ -33,9 +33,9 @@ passport.deserializeUser(async (id: string, done) => {
 });
 
 passport.use(new DiscordStrategy({
-    clientID: config.discord.clientId,
-    clientSecret: config.discord.clientSecret,
-    callbackURL: config.discord.callbackUrl,
+    clientID: discord.clientId,
+    clientSecret: discord.clientSecret,
+    callbackURL: discord.callbackUrl,
     scope: ['identify', 'email']
 }, async (accessToken, refreshToken, profile, done) => {
     try {

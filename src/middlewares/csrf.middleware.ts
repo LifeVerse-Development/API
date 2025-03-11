@@ -1,7 +1,7 @@
 import csurf from 'csurf';
 import cookieParser from 'cookie-parser';
 import { Request, Response, NextFunction } from 'express';
-import { config } from '../configs/config';
+import { application } from '../configs/application.config';
 
 const getCookieOptions = (env: string) => ({
     httpOnly: true,
@@ -10,7 +10,7 @@ const getCookieOptions = (env: string) => ({
     maxAge: 24 * 60 * 60 * 1000,
 });
 
-export const csrfMiddleware = (cookieOptions: object = getCookieOptions(config.application.env)) => {
+export const csrfMiddleware = (cookieOptions: object = getCookieOptions(application.env)) => {
     return [
         cookieParser(),
         csurf({ cookie: cookieOptions }),

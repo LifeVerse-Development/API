@@ -1,7 +1,7 @@
 import cors, { type CorsOptions } from "cors"
 import type { Request, Response, NextFunction } from "express"
 import { logger } from "../services/logger.service"
-import { config } from "../configs/config"
+import { config } from "../configs/main.config"
 
 export const corsOptions: CorsOptions = {
     origin: (origin, callback) => {
