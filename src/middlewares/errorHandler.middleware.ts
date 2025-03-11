@@ -21,9 +21,9 @@ export const notFoundHandler = (_req: Request, res: Response): void => {
 };
 
 export const globalErrorHandler: ErrorRequestHandler = (
-    err: any, 
-    _req: Request, 
-    res: Response, 
+    err: any,
+    _req: Request,
+    res: Response,
     next: NextFunction
 ): void | Promise<void> => {
     logger.error('Unhandled Server Error:', { message: err.message, stack: err.stack });

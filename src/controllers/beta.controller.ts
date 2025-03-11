@@ -4,12 +4,12 @@ import { logger } from '../services/logger.service';
 
 export const createBetaKey: RequestHandler = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { name, key, expireAt, user } = req.body;
-
-        if (!name || !key || !expireAt) {
-            res.status(400).json({ message: 'Name, key, and expiration date are required' });
-            return;
-        }
+        const betaKey = new BetaKey({
+            ...req.body,
+            isActive: true,
+            isExpired: false,
+            identifier: Math.random().toString(36).substring(2, 15),
+        });
 
         const beta = await Beta.findOne();
         if (!beta || !beta.isEnabled) {
@@ -18,24 +18,14 @@ export const createBetaKey: RequestHandler = async (req: Request, res: Response)
             return;
         }
 
-        const newBetaKey = new BetaKey({
-            identifier: Math.random().toString(36).substring(2, 15),
-            name,
-            key,
-            expireAt,
-            user,
-            isActive: true,
-            isExpired: false
-        });
-
-        beta.keys.push(newBetaKey);
+        beta.keys.push(betaKey);
         await beta.save();
 
-        logger.info('Beta key created successfully', { name, user });
-        res.status(201).json({ message: 'Beta key created successfully', betaKey: newBetaKey });
+        logger.info('Beta key created successfully', { name: betaKey.name, user: betaKey.user });
+        res.status(201).json(betaKey);
     } catch (error: any) {
         logger.error('Error creating beta key', { error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({ message: 'Error creating beta key' });
     }
 };
 
@@ -52,101 +42,63 @@ export const getAllBetaKeys: RequestHandler = async (_req: Request, res: Respons
         res.status(200).json(beta.keys);
     } catch (error: any) {
         logger.error('Error fetching beta keys', { error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({ message: 'Error fetching beta keys' });
     }
 };
 
 export const getBetaKeyById: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    const { betaKeyId } = req.params;
-
     try {
-        const beta = await Beta.findOne();
-        if (!beta || !beta.isEnabled) {
-            logger.warn('Beta system is not enabled');
-            res.status(403).json({ message: 'Beta system is not enabled' });
-            return;
-        }
-
-        const betaKey = beta.keys.find((keyObj) => keyObj._id.toString() === betaKeyId);
+        const betaKey = await BetaKey.findById(req.params.betaKeyId);
         if (!betaKey) {
-            logger.warn('Beta key not found', { betaKeyId });
+            logger.warn('Beta key not found', { betaKeyId: req.params.betaKeyId });
             res.status(404).json({ message: 'Beta key not found' });
             return;
         }
 
-        logger.info('Fetched beta key by ID', { betaKeyId });
+        logger.info('Fetched beta key by ID', { betaKeyId: betaKey._id });
         res.status(200).json(betaKey);
     } catch (error: any) {
         logger.error('Error fetching beta key by ID', { error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({ message: 'Error fetching beta key' });
     }
 };
 
 export const updateBetaKey: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    const { betaKeyId } = req.params;
-    const { isActive, expireAt, user } = req.body;
-
     try {
-        const beta = await Beta.findOne();
-        if (!beta || !beta.isEnabled) {
-            logger.warn('Beta system is not enabled');
-            res.status(403).json({ message: 'Beta system is not enabled' });
-            return;
-        }
+        const updatedData = {
+            ...req.body,
+            isExpired: req.body.expireAt ? new Date() > req.body.expireAt : false,
+        };
 
-        const betaKey = beta.keys.find((keyObj) => keyObj._id.toString() === betaKeyId);
+        const betaKey = await BetaKey.findByIdAndUpdate(req.params.betaKeyId, updatedData, { new: true, runValidators: true });
         if (!betaKey) {
-            logger.warn('Beta key not found for update', { betaKeyId });
+            logger.warn('Beta key not found for update', { betaKeyId: req.params.betaKeyId });
             res.status(404).json({ message: 'Beta key not found' });
             return;
         }
 
-        if (isActive !== undefined) {
-            betaKey.isActive = isActive;
-        }
-        if (expireAt) {
-            betaKey.expireAt = expireAt;
-            betaKey.isExpired = new Date() > expireAt;
-        }
-        if (user) {
-            betaKey.user = user;
-        }
-
-        await beta.save();
-        logger.info('Beta key updated successfully', { betaKeyId, isActive, expireAt, user });
-        res.status(200).json({ message: 'Beta key updated successfully', betaKey });
+        logger.info('Beta key updated successfully', { betaKeyId: betaKey._id });
+        res.status(200).json(betaKey);
     } catch (error: any) {
         logger.error('Error updating beta key', { error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({ message: 'Error updating beta key' });
     }
 };
 
 export const deleteBetaKey: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    const { betaKeyId } = req.params;
-
     try {
-        const beta = await Beta.findOne();
-        if (!beta || !beta.isEnabled) {
-            logger.warn('Beta system is not enabled');
-            res.status(403).json({ message: 'Beta system is not enabled' });
-            return;
-        }
-
-        const betaKeyIndex = beta.keys.findIndex((keyObj) => keyObj._id.toString() === betaKeyId);
-        if (betaKeyIndex === -1) {
-            logger.warn('Beta key not found for deletion', { betaKeyId });
+        const betaKey = await BetaKey.findByIdAndDelete(req.params.betaKeyId);
+        if (!betaKey) {
+            logger.warn('Beta key not found for deletion', { betaKeyId: req.params.betaKeyId });
             res.status(404).json({ message: 'Beta key not found' });
             return;
         }
 
-        beta.keys.splice(betaKeyIndex, 1);
-        await beta.save();
-
-        logger.info('Beta key deleted successfully', { betaKeyId });
+        logger.info('Beta key deleted successfully', { betaKeyId: betaKey._id });
         res.status(200).json({ message: 'Beta key deleted successfully' });
     } catch (error: any) {
         logger.error('Error deleting beta key', { error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({ message: 'Error deleting beta key' });
     }
 };
 
@@ -166,6 +118,6 @@ export const toggleBetaSystem: RequestHandler = async (_req: Request, res: Respo
         res.status(200).json({ message: `Beta system is now ${beta.isEnabled ? 'enabled' : 'disabled'}` });
     } catch (error: any) {
         logger.error('Error toggling beta system', { error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({ message: 'Error toggling beta system' });
     }
 };

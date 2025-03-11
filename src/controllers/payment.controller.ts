@@ -1,212 +1,258 @@
-import Stripe from 'stripe';
-import { Request, Response, RequestHandler } from "express";
-import { Payment } from '../models/Payment';
-import { User } from '../models/User';
-import { config } from '../configs/config';
-import { logger } from '../services/logger.service';
+import Stripe from "stripe";
+import type { Request, Response, RequestHandler } from "express";
+import { Payment } from "../models/Payment";
+import { config } from "../configs/config";
+import { logger } from "../services/logger.service";
 
 const stripe = new Stripe(config.gateways.payment.stripe, {
-    apiVersion: '2025-02-24.acacia',
+    apiVersion: "2025-02-24.acacia",
 });
 
-export const createPayment: RequestHandler = async (req, res): Promise<void> => {
+export const createPayment: RequestHandler = async (req: Request, res: Response): Promise<void> => {
     try {
-        logger.info('Processing payment request', { body: req.body });
+        logger.info("Processing payment request", {
+            headers: req.headers,
+            body: req.body,
+            method: req.method,
+            url: req.url,
+        });
 
-        const { userId, products, currency } = req.body;
-        const user = await User.findById(userId);
-        if (!user) return;
+        if (!req.body) {
+            logger.error("Request body is undefined", {
+                contentType: req.headers["content-type"],
+                method: req.method,
+            });
+            res.status(400).json({ message: "Invalid request: Body is missing" });
+            return;
+        }
 
-        const lineItems = products.map((product: { name: string; price: number; quantity: number }) => ({
+        const { items, customer, shipping, billing, amount, notes } = req.body;
+
+        if (!items || !items.length || !customer || !shipping) {
+            logger.error("Invalid payment request data", {
+                missingFields: !items ? "items" : !customer ? "customer" : !shipping ? "shipping" : "unknown",
+                body: req.body,
+            });
+            res.status(400).json({ message: "Invalid payment data" });
+            return;
+        }
+
+        if (!customer.email || !customer.name) {
+            logger.error("Missing customer information", { customer });
+            res.status(400).json({ message: "Customer information is incomplete" });
+            return;
+        }
+
+        if (
+            !shipping.address ||
+            !shipping.address.line1 ||
+            !shipping.address.city ||
+            !shipping.address.postal_code ||
+            !shipping.address.country
+        ) {
+            logger.error("Missing shipping address information", { shipping });
+            res.status(400).json({ message: "Shipping address is incomplete" });
+            return;
+        }
+
+        const lineItems = items.map((item: { id: string; name: string; price: number; quantity: number }) => ({
             price_data: {
-                currency: currency,
-                product_data: { name: product.name },
-                unit_amount: product.price * 100,
+                currency: "eur",
+                product_data: {
+                    name: item.name,
+                    metadata: {
+                        product_id: item.id,
+                    },
+                },
+                unit_amount: Math.round(item.price * 100),
             },
-            quantity: product.quantity,
+            quantity: item.quantity,
         }));
 
-        const session = await stripe.checkout.sessions.create({
-            customer_email: user.email,
-            line_items: lineItems,
-            mode: 'payment',
-            payment_method_configuration: 'default',
-            success_url: `http://localhost:3000/success_payment?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `http://localhost:3000/cancel_payment`,
-        });
-
-        if (session.url) {
-            res.redirect(session.url);
-            return;
-        } else {
-            throw new Error('Session URL is null');
-        }
-    } catch (error: any) {
-        logger.error('Payment processing error:', { error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Payment processing failed', error: error.message });
-    }
-};
-
-export const createSubscription: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    try {
-        logger.info('Processing subscription request', { body: req.body });
-
-        const { userId, priceId } = req.body;
-        const user = await User.findById(userId);
-        if (!user) return; res.status(404).json({ message: 'User not found' });
-
-        if (!user.stripeCustomerId) {
-            const customer = await stripe.customers.create({ email: user.email });
-            user.stripeCustomerId = customer.id;
-            await user.save();
-        }
-
-        const session = await stripe.checkout.sessions.create({
-            customer: user.stripeCustomerId,
-            line_items: [{ price: priceId, quantity: 1 }],
-            mode: 'subscription',
-            payment_method_configuration: 'default',
-            success_url: `http://localhost:3000/success_payment?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `http://localhost:3000/cancel_payment`,
-        });
-
-        res.status(201).json({ success: true, sessionId: session.id, url: session.url });
-    } catch (error: any) {
-        logger.error('Subscription creation error:', { error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Subscription creation failed', error: error.message });
-    }
-};
-
-export const getPaymentDetails: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    const { sessionId } = req.params;
-    
-    try {
-        logger.info('Fetching payment details', { sessionId });
-
-        const session = await stripe.checkout.sessions.retrieve(sessionId);
-        if (!session) {
-            res.status(404).json({ success: false, message: 'Session not found' });
-            return;
-        }
-
-        res.status(200).json({ success: true, session });
-    } catch (error: any) {
-        logger.error('Error fetching payment details', { sessionId, error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Internal server error' });
-    }
-};
-
-export const handleStripeWebhook: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    const sig = req.headers['stripe-signature'] as string;
-    const endpointSecret = config.gateways.payment.stripeWebhookSecret;
-    
-    let event: Stripe.Event;
-
-    try {
-        event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
-    } catch (err: any) {
-        res.status(400).send(`Webhook Error: ${err.message}`);
-        return;
-    }
-
-    try {
-        if (event.type === 'checkout.session.completed') {
-            const session = event.data.object as Stripe.Checkout.Session;
-
-            if (!session.customer_email) return;
-
-            const user = await User.findOne({ email: session.customer_email });
-            if (!user) return;
-
-            const newPayment = new Payment({
-                identifier: session.id,
-                userId: user._id,
-                paymentMethod: session.payment_method_types?.[0] || 'unknown',
-                amount: session.amount_total ? session.amount_total / 100 : 0,
-                currency: session.currency,
-                transactionId: session.payment_intent,
-                paymentDate: new Date(),
-                status: 'success',
+        if (amount.shipping > 0) {
+            lineItems.push({
+                price_data: {
+                    currency: "eur",
+                    product_data: {
+                        name: `Shipping (${shipping.method})`,
+                    },
+                    unit_amount: Math.round(amount.shipping * 100),
+                },
+                quantity: 1,
             });
-
-            await newPayment.save();
-            logger.info(`Payment recorded: ${newPayment.identifier}`);
-        } else if (event.type === 'checkout.session.expired') {
-            const session = event.data.object as Stripe.Checkout.Session;
-            const payment = await Payment.findOne({ identifier: session.id });
-            if (payment) {
-                payment.status = 'failed';
-                await payment.save();
-                logger.info(`Payment failed: ${payment.identifier}`);
-            }
         }
-    } catch (error: any) {
-        logger.error('Webhook processing error:', { error: error.message, stack: error.stack });
-    }
 
-    res.json({ received: true });
+        getCountryCode(shipping.address.country);
+
+        const session = await stripe.checkout.sessions.create({
+            customer_email: customer.email,
+            line_items: lineItems,
+            mode: "payment",
+            payment_method_types: ["bancontact", "card", "eps", "klarna", "link", "p24", "revolut_pay"],
+
+            shipping_address_collection: {
+                allowed_countries: ["DE", "AT", "CH", "FR", "NL", "BE"]
+            },
+
+            shipping_options: [
+                {
+                    shipping_rate_data: {
+                        type: "fixed_amount",
+                        fixed_amount: {
+                            amount: Math.round(amount.shipping * 100),
+                            currency: "eur",
+                        },
+                        display_name: `${shipping.method.charAt(0).toUpperCase() + shipping.method.slice(1)} Shipping`,
+                        delivery_estimate: {
+                            minimum: {
+                                unit: "business_day",
+                                value: shipping.method === "standard" ? 3 : shipping.method === "express" ? 2 : 1,
+                            },
+                            maximum: {
+                                unit: "business_day",
+                                value: shipping.method === "standard" ? 5 : shipping.method === "express" ? 3 : 1,
+                            },
+                        },
+                    },
+                },
+            ],
+            success_url: `${config.frontendUrl}/success_payment?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${config.frontendUrl}/cancel_payment`,
+            metadata: {
+                notes: notes || "",
+                order_total: amount.total.toString(),
+                tax: amount.tax.toString(),
+                subtotal: amount.subtotal.toString(),
+                customer_name: customer.name,
+                customer_email: customer.email,
+                customer_phone: customer.phone || "",
+                shipping_method: shipping.method,
+                shipping_address_line1: shipping.address.line1,
+                shipping_address_line2: shipping.address.line2 || "",
+                shipping_address_city: shipping.address.city,
+                shipping_address_state: shipping.address.state || "",
+                shipping_address_postal_code: shipping.address.postal_code,
+                shipping_address_country: shipping.address.country,
+                billing_same_as_shipping: billing ? "false" : "true",
+            },
+        });
+
+        const payment = new Payment({
+            identifier: generatePaymentIdentifier(),
+            paymentMethod: "stripe",
+            amount: amount.total,
+            currency: "eur",
+            paymentDate: new Date(),
+            transactionId: session.id,
+            status: "pending",
+            customerInfo: {
+                name: customer.name,
+                email: customer.email,
+                phone: customer.phone || "",
+            },
+            shippingInfo: {
+                address: {
+                    line1: shipping.address.line1,
+                    line2: shipping.address.line2 || "",
+                    city: shipping.address.city,
+                    state: shipping.address.state || "",
+                    postalCode: shipping.address.postal_code,
+                    country: shipping.address.country,
+                },
+                method: shipping.method,
+            },
+            items: items.map((item: any) => ({
+                productId: item.id,
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity,
+            })),
+        });
+
+        await payment.save();
+
+        logger.info("Payment record created", {
+            paymentId: payment._id,
+            identifier: payment.identifier,
+            sessionId: session.id,
+        });
+
+        logger.info("Stripe session created", {
+            sessionId: session.id,
+            url: session.url,
+        });
+
+        res.json({
+            redirectUrl: session.url,
+            sessionId: session.id,
+            paymentIdentifier: payment.identifier,
+        });
+    } catch (error: any) {
+        logger.error("Payment processing error:", {
+            error: error.message,
+            stack: error.stack,
+            code: error.code || "unknown",
+        });
+
+        if (error.type === "StripeCardError") {
+            res.status(400).json({ message: "Payment card error", error: error.message });
+        } else if (error.type === "StripeInvalidRequestError") {
+            res.status(400).json({ message: "Invalid payment request", error: error.message });
+        } else {
+            res.status(500).json({ message: "Payment processing failed", error: error.message });
+        }
+    }
 };
 
-export const getAllPayments: RequestHandler = async (_req: Request, res: Response): Promise<void> => {
+function generatePaymentIdentifier(): string {
+    const timestamp = Date.now().toString(36);
+    const randomStr = Math.random().toString(36).substring(2, 10);
+    return `${timestamp}-${randomStr}`;
+}
+
+function getCountryCode(countryName: string): string {
+    const countryMap: Record<string, string> = {
+        Germany: "DE",
+        Austria: "AT",
+        Switzerland: "CH",
+        France: "FR",
+        Netherlands: "NL",
+        Belgium: "BE",
+    };
+
+    return countryMap[countryName] || "DE";
+}
+
+export const getPaymentStatus: RequestHandler = async (req: Request, res: Response): Promise<void> => {
     try {
-        logger.info('Fetching all payments');
+        const { transactionId } = req.params;
 
-        const payments = await Payment.find();
-        res.status(200).json({ success: true, payments });
-    } catch (error: any) {
-        logger.error('Error fetching all payments', { error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Internal server error' });
-    }
-};
+        if (!transactionId) {
+            res.status(400).json({ message: "Session ID is required" });
+            return;
+        }
 
-export const getPaymentById: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    const { paymentId } = req.params;
+        const session = await stripe.checkout.sessions.retrieve(transactionId);
+        const payment = await Payment.findOne({ transactionId: transactionId });
 
-    try {
-        logger.info('Fetching payment by ID', { paymentId });
-
-        const payment = await Payment.findById(paymentId);
         if (!payment) {
-            res.status(404).json({ success: false, message: 'Payment not found' });
+            res.status(404).json({ message: "Payment not found" });
             return;
         }
 
-        res.status(200).json({ success: true, payment });
+        if (session.payment_status === "paid" && payment.status !== "completed") {
+            payment.status = "completed";
+            await payment.save();
+            logger.info("Payment status updated to completed", { transactionId });
+        }
+
+        res.json({
+            paymentStatus: payment.status,
+            stripeStatus: session.payment_status,
+            paymentIdentifier: payment.identifier,
+        });
     } catch (error: any) {
-        logger.error('Error fetching payment by ID', { paymentId, error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Internal server error' });
-    }
-};
-
-export const deletePayment: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    const { paymentId } = req.params;
-
-    try {
-        logger.info('Deleting payment', { paymentId });
-
-        const payment = await Payment.findById(paymentId);
-        if (!payment) {
-            res.status(404).json({ success: false, message: 'Payment not found' });
-            return;
-        }
-
-        if (!payment.transactionId) {
-            res.status(400).json({ success: false, message: 'Transaction ID not found for the payment' });
-            return;
-        }
-
-        const canceledPaymentIntent = await stripe.paymentIntents.cancel(payment.transactionId);
-
-        if (canceledPaymentIntent.status !== 'canceled') {
-            res.status(400).json({ success: false, message: 'Failed to cancel payment intent' });
-            return;
-        }
-
-        await Payment.findByIdAndDelete(paymentId);
-
-        res.status(200).json({ success: true, message: 'Payment deleted successfully' });
-    } catch (error: any) {
-        logger.error('Error deleting payment', { paymentId, error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Internal server error' });
+        logger.error("Error retrieving payment status:", { error: error.message });
+        res.status(500).json({ message: "Unable to retrieve payment status", error: error.message });
     }
 };

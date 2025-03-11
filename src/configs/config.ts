@@ -34,5 +34,9 @@ export const config = {
             authToken: String(process.env.TWILIO_AUTH_TOKEN),
             phoneNumber: String(process.env.TWILIO_PHONE_NUMBER),
         },
-    }
+    },
+    frontendUrl: String(process.env.FRONTEND_URL),
+    cors: {
+        allowedOrigins: process.env.ALLOWED_ORIGINS || "*",
+    },
 }

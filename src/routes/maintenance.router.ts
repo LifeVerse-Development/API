@@ -1,12 +1,14 @@
 import { Router } from 'express';
-import { getMaintenanceStatus, updateMaintenanceStatus, deleteMaintenanceStatus } from '../controllers/maintenance.controller';
+import { createMaintenance, getAllMaintenance, getMaintenanceById, updateMaintenance, deleteMaintenance } from '../controllers/maintenance.controller';
 import { hasRole } from '../middlewares/authorization.middleware';
 import { isAuthenticated } from '../middlewares/authentication.middleware';
 
 const router = Router();
 
-router.get('/', getMaintenanceStatus);
-router.post('/', isAuthenticated, hasRole('Admin', 'Moderator', 'Developer', 'Content', 'Supporter'), updateMaintenanceStatus);
-router.delete('/', isAuthenticated, hasRole('Admin', 'Moderator', 'Developer', 'Content', 'Supporter'), deleteMaintenanceStatus);
+router.post('/', isAuthenticated, hasRole('Admin', 'Moderator', 'Developer', 'Content', 'Supporter'), createMaintenance);
+router.get('/', isAuthenticated, hasRole('Admin', 'Moderator', 'Developer', 'Content', 'Supporter'), getAllMaintenance);
+router.get('/:maintenanceId', getMaintenanceById);
+router.put('/:maintenanceId', isAuthenticated, hasRole('Admin', 'Moderator', 'Developer', 'Content', 'Supporter'), updateMaintenance);
+router.delete('/:maintenanceId', isAuthenticated, hasRole('Admin', 'Moderator', 'Developer', 'Content', 'Supporter'), deleteMaintenance);
 
 export default router;

@@ -4,15 +4,15 @@ import { Sms } from '../models/Sms';
 import { logger } from '../services/logger.service';
 
 export const sendSms: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    const { phoneNumber, message } = req.body;
-
-    if (!phoneNumber || !message) {
-        logger.warn('Missing phone number or message', { phoneNumber, message });
-        res.status(400).json({ message: 'Phone number and message are required' });
-        return;
-    }
-
     try {
+        const { phoneNumber, message } = req.body;
+
+        if (!phoneNumber || !message) {
+            logger.warn('Missing phone number or message', { phoneNumber, message });
+            res.status(400).json({ message: 'Phone number and message are required' });
+            return;
+        }
+
         logger.info('Sending SMS', { phoneNumber, message });
         const response = await SmsService.sendSms(phoneNumber, message);
 
@@ -40,15 +40,15 @@ export const sendSms: RequestHandler = async (req: Request, res: Response): Prom
 };
 
 export const sendReminder: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    const { phoneNumber, reminderMessage, sendAt } = req.body;
-
-    if (!phoneNumber || !reminderMessage || !sendAt) {
-        logger.warn('Missing phone number, reminder message, or send time', { phoneNumber, reminderMessage, sendAt });
-        res.status(400).json({ message: 'Phone number, reminder message, and send time are required' });
-        return;
-    }
-
     try {
+        const { phoneNumber, reminderMessage, sendAt } = req.body;
+
+        if (!phoneNumber || !reminderMessage || !sendAt) {
+            logger.warn('Missing phone number, reminder message, or send time', { phoneNumber, reminderMessage, sendAt });
+            res.status(400).json({ message: 'Phone number, reminder message, and send time are required' });
+            return;
+        }
+
         const reminderDate = new Date(sendAt);
         logger.info('Scheduling reminder SMS', { phoneNumber, reminderMessage, sendAt: reminderDate });
 
@@ -89,9 +89,8 @@ export const getAllSms: RequestHandler = async (_req: Request, res: Response): P
 };
 
 export const getSmsById: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    const { smsId } = req.params;
-
     try {
+        const { smsId } = req.params;
         logger.info('Fetching SMS record by ID', { smsId });
         const sms = await Sms.findById(smsId);
         if (!sms) {
@@ -102,7 +101,7 @@ export const getSmsById: RequestHandler = async (req: Request, res: Response): P
 
         res.status(200).json(sms);
     } catch (error: any) {
-        logger.error('Error fetching SMS record', { smsId, error: error.message, stack: error.stack });
+        logger.error('Error fetching SMS record', { smsId: req.params.smsId, error: error.message, stack: error.stack });
         res.status(500).json({ message: 'Error fetching SMS record', error: error.message });
     }
 };
@@ -119,9 +118,8 @@ export const getAllReminders: RequestHandler = async (_req: Request, res: Respon
 };
 
 export const getReminderById: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    const { reminderId } = req.params;
-
     try {
+        const { reminderId } = req.params;
         logger.info('Fetching reminder by ID', { reminderId });
         const reminder = await Sms.findOne({ _id: reminderId, status: 'scheduled' });
         if (!reminder) {
@@ -132,7 +130,7 @@ export const getReminderById: RequestHandler = async (req: Request, res: Respons
 
         res.status(200).json(reminder);
     } catch (error: any) {
-        logger.error('Error fetching reminder', { reminderId, error: error.message, stack: error.stack });
+        logger.error('Error fetching reminder', { reminderId: req.params.reminderId, error: error.message, stack: error.stack });
         res.status(500).json({ message: 'Error fetching reminder', error: error.message });
     }
 };

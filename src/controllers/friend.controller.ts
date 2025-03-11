@@ -4,7 +4,7 @@ import { logger } from "../services/logger.service";
 
 export const sendFriendRequest: RequestHandler = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { userId, friendId, guildId, buttonIds, buttonLabels } = req.body;
+        const { userId, friendId } = req.body;
 
         if (!userId || !friendId) {
             logger.warn("Friend request failed: Missing required fields.");
@@ -12,7 +12,7 @@ export const sendFriendRequest: RequestHandler = async (req: Request, res: Respo
             return;
         }
 
-        const existingRequest = await Friend.findOne({ userId, friendId });
+        const existingRequest = await Friend.findOne({ userId, friendId, status: "pending" });
         if (existingRequest) {
             logger.warn(`Friend request failed: Request between ${userId} and ${friendId} already exists.`);
             res.status(400).json({ message: "Friend request already exists" });
@@ -23,10 +23,7 @@ export const sendFriendRequest: RequestHandler = async (req: Request, res: Respo
             identifier: Math.random().toString(36).substring(2, 15),
             userId,
             friendId,
-            guildId,
-            status: "pending",
-            buttonIds,
-            buttonLabels,
+            status: "pending"
         });
 
         await friendRequest.save();
@@ -85,6 +82,41 @@ export const getFriends: RequestHandler = async (req: Request, res: Response): P
         res.status(200).json(friends);
     } catch (error: any) {
         logger.error(`Fetching friends failed: ${error.message}`, { stack: error.stack });
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const getFriendRequestById: RequestHandler = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { requestId } = req.params;
+
+        const friendRequest = await Friend.findById(requestId);
+        if (!friendRequest) {
+            logger.warn(`Friend request not found for ID: ${requestId}`);
+            res.status(404).json({ message: "Friend request not found" });
+            return;
+        }
+
+        logger.info(`Fetched friend request by ID: ${requestId}`);
+        res.status(200).json(friendRequest);
+    } catch (error: any) {
+        logger.error(`Fetching friend request by ID failed: ${error.message}`, { stack: error.stack });
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const getFriendRequestsByUserId: RequestHandler = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { userId } = req.params;
+
+        const requests = await Friend.find({
+            $or: [{ userId, status: "pending" }, { friendId: userId, status: "pending" }],
+        });
+
+        logger.info(`Fetched friend requests for user ${userId}.`);
+        res.status(200).json(requests);
+    } catch (error: any) {
+        logger.error(`Fetching friend requests by user ID failed: ${error.message}`, { stack: error.stack });
         res.status(500).json({ message: "Internal server error" });
     }
 };

@@ -1,17 +1,14 @@
-import express, { Router } from 'express';
-import { createPayment, createSubscription, getPaymentDetails, handleStripeWebhook, getAllPayments, getPaymentById, deletePayment } from '../controllers/payment.controller';
-import { hasRole } from '../middlewares/authorization.middleware';
+import { Router } from 'express';
+import { createPayment, getPaymentStatus } from '../controllers/payment.controller';
+//import { hasRole } from '../middlewares/authorization.middleware';
 import { isAuthenticated } from '../middlewares/authentication.middleware';
 
 const router = Router();
 
 router.post('/', isAuthenticated, createPayment);
-router.post('/subscription', isAuthenticated, createSubscription);
-router.get('/', isAuthenticated, hasRole('Admin', 'Moderator', 'Developer', 'Content', 'Supporter'), getAllPayments);
-router.get('/:paymentId', isAuthenticated, hasRole('Admin', 'Moderator', 'Developer', 'Content', 'Supporter'), getPaymentById);
-router.get('/details/:sessionId', isAuthenticated, getPaymentDetails);
-router.delete('/:paymentId', isAuthenticated, hasRole('Admin', 'Moderator'), deletePayment);
-
-router.post('/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
+router.get('/:transactionId', isAuthenticated, getPaymentStatus);
+//router.get('/', getAllPayments);
+//router.put('/:transactionId', isAuthenticated, hasRole('Admin', 'Moderator', 'Developer', 'Content', 'Supporter'), updatePayment);
+//router.delete('/:transactionId', isAuthenticated, hasRole('Admin', 'Moderator', 'Developer', 'Content', 'Supporter'), deletePayment);
 
 export default router;

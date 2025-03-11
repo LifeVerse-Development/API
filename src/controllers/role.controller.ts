@@ -4,15 +4,15 @@ import { User } from '../models/User';
 import { logger } from '../services/logger.service';
 
 export const createRole: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    const { color, name, permissions } = req.body;
-
-    if (!color || !name || !permissions || !Array.isArray(permissions)) {
-        logger.warn('Missing color, name, or permissions', { color, name, permissions });
-        res.status(400).json({ message: 'Color, name, and permissions are required' });
-        return;
-    }
-
     try {
+        const { color, name, permissions } = req.body;
+
+        if (!color || !name || !permissions || !Array.isArray(permissions)) {
+            logger.warn('Missing color, name, or permissions', { color, name, permissions });
+            res.status(400).json({ message: 'Color, name, and permissions are required' });
+            return;
+        }
+
         logger.info('Checking if role already exists', { name });
         const roleExists = await Role.findOne({ name });
         if (roleExists) {
@@ -39,20 +39,18 @@ export const createRole: RequestHandler = async (req: Request, res: Response): P
 
 export const getAllRoles: RequestHandler = async (_req: Request, res: Response): Promise<void> => {
     try {
-        logger.info('Fetching all roles');
         const roles = await Role.find();
+        logger.info('Fetched all roles', { count: roles.length });
         res.status(200).json(roles);
     } catch (error: any) {
-        logger.error('Error fetching all roles', { error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Internal server error' });
+        logger.error('Error fetching roles', { error: error.message, stack: error.stack });
+        res.status(500).json({ message: 'Error fetching roles' });
     }
 };
 
 export const getRoleById: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    const { roleId } = req.params;
-
     try {
-        logger.info('Fetching role by ID', { roleId });
+        const { roleId } = req.params;
         const role = await Role.findById(roleId);
         if (!role) {
             logger.warn('Role not found', { roleId });
@@ -65,23 +63,22 @@ export const getRoleById: RequestHandler = async (req: Request, res: Response): 
 
         res.status(200).json({ role, users: usersWithRole });
     } catch (error: any) {
-        logger.error('Error fetching role by ID', { roleId, error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Internal server error' });
+        logger.error('Error fetching role by ID', { roleId: req.params.roleId, error: error.message, stack: error.stack });
+        res.status(500).json({ message: 'Error fetching role' });
     }
 };
 
 export const updateRole: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    const { roleId } = req.params;
-    const { color, name, permissions } = req.body;
-
-    if (!color || !name || !permissions || !Array.isArray(permissions)) {
-        logger.warn('Missing color, name, or permissions for update', { color, name, permissions });
-        res.status(400).json({ message: 'Color, name, and permissions are required' });
-        return;
-    }
-
     try {
-        logger.info('Updating role', { roleId, name, permissions });
+        const { roleId } = req.params;
+        const { color, name, permissions } = req.body;
+
+        if (!color || !name || !permissions || !Array.isArray(permissions)) {
+            logger.warn('Missing color, name, or permissions for update', { color, name, permissions });
+            res.status(400).json({ message: 'Color, name, and permissions are required' });
+            return;
+        }
+
         const updatedRole = await Role.findByIdAndUpdate(
             roleId,
             { color, name, permissions },
@@ -97,16 +94,14 @@ export const updateRole: RequestHandler = async (req: Request, res: Response): P
         logger.info('Role updated successfully', { roleId, updatedRole });
         res.status(200).json({ message: 'Role updated successfully', role: updatedRole });
     } catch (error: any) {
-        logger.error('Error updating role', { roleId, error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Internal server error' });
+        logger.error('Error updating role', { roleId: req.params.roleId, error: error.message, stack: error.stack });
+        res.status(500).json({ message: 'Error updating role' });
     }
 };
 
 export const deleteRole: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    const { roleId } = req.params;
-
     try {
-        logger.info('Deleting role', { roleId });
+        const { roleId } = req.params;
         const deletedRole = await Role.findByIdAndDelete(roleId);
         if (!deletedRole) {
             logger.warn('Role not found for deletion', { roleId });
@@ -117,7 +112,42 @@ export const deleteRole: RequestHandler = async (req: Request, res: Response): P
         logger.info('Role deleted successfully', { roleId });
         res.status(200).json({ message: 'Role deleted successfully' });
     } catch (error: any) {
-        logger.error('Error deleting role', { roleId, error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Internal server error' });
+        logger.error('Error deleting role', { roleId: req.params.roleId, error: error.message, stack: error.stack });
+        res.status(500).json({ message: 'Error deleting role' });
+    }
+};
+
+export const assignRoleToUser: RequestHandler = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { userId, roleId } = req.body;
+
+        if (!userId || !roleId) {
+            logger.warn('Missing userId or roleId', { userId, roleId });
+            res.status(400).json({ message: 'userId and roleId are required' });
+            return;
+        }
+
+        const role = await Role.findById(roleId);
+        if (!role) {
+            logger.warn('Role not found', { roleId });
+            res.status(404).json({ message: 'Role not found' });
+            return;
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            logger.warn('User not found', { userId });
+            res.status(404).json({ message: 'User not found' });
+            return;
+        }
+
+        user.role = roleId;
+        await user.save();
+
+        logger.info('Role assigned to user successfully', { userId, roleId });
+        res.status(200).json({ message: 'Role assigned successfully', user });
+    } catch (error: any) {
+        logger.error('Error assigning role to user', { error: error.message, stack: error.stack });
+        res.status(500).json({ message: 'Error assigning role to user' });
     }
 };
