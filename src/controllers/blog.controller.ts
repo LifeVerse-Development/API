@@ -19,6 +19,8 @@ export const createBlogPost: RequestHandler = async (req: Request, res: Response
             tags,
             author,
             image,
+            reactions: [],
+            comments: [],
         });
 
         await newBlogPost.save();
@@ -137,76 +139,104 @@ export const createComment: RequestHandler = async (req: Request, res: Response)
     }
 };
 
-export const removeComment: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    const { blogId, commentId } = req.params;
-    const { userId, userRole } = req.body;
+export const getAllComments: RequestHandler = async (req: Request, res: Response): Promise<void> => {
+    const { blogId } = req.params;
 
     try {
         const blogPost = await Blog.findById(blogId);
         if (!blogPost) {
-            logger.warn('Blog post not found for comment removal', { blogId });
+            logger.warn('Blog post not found for comments', { blogId });
             res.status(404).json({ message: 'Blog post not found' });
             return;
         }
 
-        const comment = blogPost.comments.find((comment) => comment.id.toString() === commentId);
-        if (!comment) {
-            logger.warn('Comment not found for removal', { commentId });
-            res.status(404).json({ message: 'Comment not found' });
-            return;
-        }
-
-        if (comment.user.toString() !== userId.toString() && userRole !== 'team') {
-            logger.warn('User is not authorized to remove this comment', { userId, commentId });
-            res.status(403).json({ message: 'Forbidden' });
-            return;
-        }
-
-        blogPost.comments = blogPost.comments.filter((comment) => comment.id.toString() !== commentId);
-        await blogPost.save();
-        
-        logger.info('Comment removed successfully', { blogId, commentId, userId });
-        res.status(200).json({ message: 'Comment removed successfully' });
+        logger.info('Fetched all comments for blog post', { blogId, count: blogPost.comments.length });
+        res.status(200).json(blogPost.comments);
     } catch (error: any) {
-        logger.error('Error removing comment', { error: error.message, stack: error.stack });
+        logger.error('Error fetching comments', { error: error.message, stack: error.stack });
         res.status(500).json({ message: 'Internal server error' });
     }
 };
 
-export const removeCommentFromTeam: RequestHandler = async (req: Request, res: Response): Promise<void> => {
+export const getCommentById: RequestHandler = async (req: Request, res: Response): Promise<void> => {
     const { blogId, commentId } = req.params;
-    const { userId, userRole } = req.body;
 
     try {
         const blogPost = await Blog.findById(blogId);
         if (!blogPost) {
-            logger.warn('Blog post not found for team comment removal', { blogId });
+            logger.warn('Blog post not found for comment fetch', { blogId });
             res.status(404).json({ message: 'Blog post not found' });
             return;
         }
 
-        const comment = blogPost.comments.find((comment) => comment.id.toString() === commentId);
+        const comment = blogPost.comments.find(comment => comment._id?.toString() === commentId);
         if (!comment) {
-            logger.warn('Comment not found for team removal', { commentId });
+            logger.warn('Comment not found', { blogId, commentId });
             res.status(404).json({ message: 'Comment not found' });
             return;
         }
 
-        const allowedRoles = ['Admin', 'Moderator', 'Developer', 'Content', 'Supporter'];
+        logger.info('Fetched comment by ID', { blogId, commentId });
+        res.status(200).json(comment);
+    } catch (error: any) {
+        logger.error('Error fetching comment by ID', { error: error.message, stack: error.stack });
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
 
-        if (!allowedRoles.includes(userRole)) {
-            logger.warn('User does not have the required role to remove this comment', { userId, commentId, userRole });
-            res.status(403).json({ message: 'Forbidden' });
+export const updateComment: RequestHandler = async (req: Request, res: Response): Promise<void> => {
+    const { blogId, commentId } = req.params;
+    const { content } = req.body;
+
+    try {
+        const blogPost = await Blog.findById(blogId);
+        if (!blogPost) {
+            logger.warn('Blog post not found for comment update', { blogId });
+            res.status(404).json({ message: 'Blog post not found' });
             return;
         }
 
-        blogPost.comments = blogPost.comments.filter((comment) => comment.id.toString() !== commentId);
+        const comment = blogPost.comments.find(comment => comment._id?.toString() === commentId);
+        if (!comment) {
+            logger.warn('Comment not found for update', { blogId, commentId });
+            res.status(404).json({ message: 'Comment not found' });
+            return;
+        }
+
+        comment.content = content;
         await blogPost.save();
-        
-        logger.info('Team comment removed successfully', { blogId, commentId, userId });
-        res.status(200).json({ message: 'Team comment removed successfully' });
+        logger.info('Comment updated successfully', { blogId, commentId });
+        res.status(200).json({ message: 'Comment updated successfully', comment });
     } catch (error: any) {
-        logger.error('Error removing team comment', { error: error.message, stack: error.stack });
+        logger.error('Error updating comment', { error: error.message, stack: error.stack });
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const deleteComment: RequestHandler = async (req: Request, res: Response): Promise<void> => {
+    const { blogId, commentId } = req.params;
+
+    try {
+        const blogPost = await Blog.findById(blogId);
+        if (!blogPost) {
+            logger.warn('Blog post not found for comment deletion', { blogId });
+            res.status(404).json({ message: 'Blog post not found' });
+            return;
+        }
+
+        const comment = blogPost.comments.find(comment => comment._id?.toString() === commentId);
+        if (!comment) {
+            logger.warn('Comment not found for deletion', { blogId, commentId });
+            res.status(404).json({ message: 'Comment not found' });
+            return;
+        }
+
+        comment.deleteOne();
+        await blogPost.save();
+        logger.info('Comment deleted successfully', { blogId, commentId });
+        res.status(200).json({ message: 'Comment deleted successfully' });
+    } catch (error: any) {
+        logger.error('Error deleting comment', { error: error.message, stack: error.stack });
         res.status(500).json({ message: 'Internal server error' });
     }
 };
@@ -251,4 +281,3 @@ export const toggleReaction: RequestHandler = async (req: Request, res: Response
         res.status(500).json({ message: 'Internal server error' });
     }
 };
-

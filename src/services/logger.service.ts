@@ -2,6 +2,7 @@ import winston from 'winston';
 import path from 'path';
 import fs from 'fs';
 import { sendToDiscord } from '../utils/sendToDiscord.util';
+import { application } from '../configs/application.config';
 
 const logDirectory = path.join(__dirname, '../../logs');
 
@@ -10,22 +11,45 @@ if (!fs.existsSync(logDirectory)) {
 }
 
 export const logger = winston.createLogger({
-    level: 'debug',
+    level: application.env === 'production' ? 'info' : 'debug',
     format: winston.format.combine(
         winston.format.timestamp(),
-        winston.format.json()
+        winston.format.json(),
+        winston.format.printf(({ timestamp, level, message, meta }) => {
+            return `[${timestamp}] [${level}] ${message} ${meta ? JSON.stringify(meta) : ''}`;
+        })
     ),
     transports: [
-        new winston.transports.File({ filename: path.join(logDirectory, 'errors.log'), level: 'error' }),
-        new winston.transports.File({ filename: path.join(logDirectory, 'combined.log') }),
-        new winston.transports.Console({ format: winston.format.simple() })
+        new winston.transports.File({
+            filename: path.join(logDirectory, 'errors.log'),
+            level: 'error',
+            maxsize: 10 * 1024 * 1024,
+            maxFiles: 5,
+        }),
+        new winston.transports.File({
+            filename: path.join(logDirectory, 'combined.log'),
+            level: 'info',
+            maxsize: 10 * 1024 * 1024,
+            maxFiles: 5,
+        }),
+        new winston.transports.Console({
+            format: winston.format.combine(
+                winston.format.colorize(),
+                winston.format.simple()
+            ),
+            level: application.env === 'production' ? 'info' : 'debug',
+        }),
     ],
 });
 
 logger.on('data', async (log) => {
     const { level, message, timestamp } = log;
     if (['error', 'warn', 'debug'].includes(level)) {
-        await sendToDiscord(`[${timestamp}] ${message}`, level);
+        try {
+            await sendToDiscord(`[${timestamp}] ${message}`, level);
+        } catch (err) {
+            logger.error('Failed to send log to Discord', { error: err });
+        }
     }
 });
 

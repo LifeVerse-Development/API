@@ -2,7 +2,7 @@ import { Schema, model, Document } from 'mongoose';
 
 interface IPost {
     identifier: string;
-    image: string;
+    image?: string;
     title: string;
     description: string;
     content: string;

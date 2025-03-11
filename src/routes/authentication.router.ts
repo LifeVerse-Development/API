@@ -1,6 +1,8 @@
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import passport from "passport";
 import { isAuthenticated } from "../middlewares/authentication.middleware";
+import { logger } from "../services/logger.service";
+import { config } from "../configs/main.config";
 
 const router = Router();
 
@@ -108,19 +110,20 @@ router.get("/discord/callback", passport.authenticate("discord", { failureRedire
         const user = req.user as DiscordUser;
         req.session.user = user;
 
-        res.redirect(
-            `http://localhost:3000/login?user=${encodeURIComponent(JSON.stringify(user))}`
+        res.status(200).redirect(
+            `${config.frontendUrl}/login?user=${encodeURIComponent(JSON.stringify(user))}`
         );
     }
 );
 
-router.get("/logout", isAuthenticated, (req, res, next) => {
+router.get("/logout", isAuthenticated, (req: Request, res: Response, next: NextFunction) => {
     req.session.destroy((err) => {
         if (err) {
             return next(err);
         }
         res.clearCookie("connect.sid");
-        res.redirect("/");
+        res.status(200).json({ message: `${req.session.user?.username} been successfully logged out.` });
+        logger.debug(`${req.session.user?.username} successfully logged out.`)
     });
 });
 

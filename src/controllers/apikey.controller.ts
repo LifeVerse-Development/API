@@ -30,10 +30,10 @@ export const createApiKey: RequestHandler = async (req: Request, res: Response):
         await newApiKey.save();
         logger.info('API Key created successfully', { key, user });
 
-        res.status(201).json({ message: 'API Key created successfully', apiKey: newApiKey });
+        res.status(201).json(newApiKey);
     } catch (error: any) {
         logger.error('Error creating API Key', { error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({ message: 'Error creating API Key' });
     }
 };
 
@@ -45,7 +45,7 @@ export const getAllApiKeys: RequestHandler = async (_req: Request, res: Response
         res.status(200).json(apiKeys);
     } catch (error: any) {
         logger.error('Error fetching all API keys', { error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({ message: 'Error fetching API keys' });
     }
 };
 
@@ -64,7 +64,7 @@ export const getApiKeyById: RequestHandler = async (req: Request, res: Response)
         res.status(200).json(apiKey);
     } catch (error: any) {
         logger.error('Error fetching API Key by ID', { error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({ message: 'Error fetching API Key' });
     }
 };
 
@@ -87,10 +87,10 @@ export const updateApiKey: RequestHandler = async (req: Request, res: Response):
         await apiKey.save();
         logger.info('API Key updated successfully', { apiKeyId, name, expiresAt, isActive });
 
-        res.status(200).json({ message: 'API Key updated successfully', apiKey });
+        res.status(200).json(apiKey);
     } catch (error: any) {
         logger.error('Error updating API Key', { error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({ message: 'Error updating API Key' });
     }
 };
 
@@ -109,6 +109,6 @@ export const deleteApiKey: RequestHandler = async (req: Request, res: Response):
         res.status(200).json({ message: 'API Key deleted successfully' });
     } catch (error: any) {
         logger.error('Error deleting API Key', { error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({ message: 'Error deleting API Key' });
     }
 };

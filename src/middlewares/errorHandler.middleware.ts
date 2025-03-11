@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
 import { logger } from '../services/logger.service';
+import { application } from '../configs/application.config';
 
 export const jsonErrorHandler: ErrorRequestHandler = (
     err: SyntaxError | any,
@@ -21,9 +22,9 @@ export const notFoundHandler = (_req: Request, res: Response): void => {
 };
 
 export const globalErrorHandler: ErrorRequestHandler = (
-    err: any, 
-    _req: Request, 
-    res: Response, 
+    err: any,
+    _req: Request,
+    res: Response,
     next: NextFunction
 ): void | Promise<void> => {
     logger.error('Unhandled Server Error:', { message: err.message, stack: err.stack });
@@ -33,12 +34,12 @@ export const globalErrorHandler: ErrorRequestHandler = (
     }
 
     const statusCode = err.status || 500;
-    const errorMessage = process.env.NODE_ENV === 'production'
+    const errorMessage = application.env === 'production'
         ? 'An unexpected error occurred. Please try again later.'
         : err.message;
 
     res.status(statusCode).json({
         error: errorMessage,
-        ...(process.env.NODE_ENV !== 'production' ? { stack: err.stack } : {})
+        ...(application.env !== 'production' ? { stack: err.stack } : {})
     });
 };

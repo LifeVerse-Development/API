@@ -2,22 +2,22 @@ import { Request, Response, NextFunction } from 'express';
 import { logger } from '../services/logger.service';
 
 export const isAuthenticated = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    if (req.isAuthenticated && req.isAuthenticated()) {
+        const userId = (req.user as any)?.userId;
+
+        if (userId) {
+            logger.info('User authenticated via session', { ip: req.ip, userId });
+            return next();
+        }
+    }
+
     const accessToken = req.headers['authorization']?.split(' ')[1];
-    const isAuthenticatedHeader = req.headers['x-is-authenticated'];
 
-    if (!accessToken) {
-        logger.warn('Tokens missing', { ip: req.ip, headers: req.headers });
-        res.status(401).json({ message: 'Unauthorized' });
-        return;
+    if (accessToken) {
+        logger.info('User authenticated via access token', { ip: req.ip });
+        return next();
     }
 
-    if (isAuthenticatedHeader !== 'true') {
-        logger.warn('User not authenticated in header', { ip: req.ip, headers: req.headers });
-        res.status(401).json({ message: 'Unauthorized' });
-        return;
-    }
-
-    logger.info('User authenticated from header', { ip: req.ip });
-
-    next();
+    logger.warn('User not authenticated', { ip: req.ip });
+    res.status(401).json({ message: 'Unauthorized' });
 };
