@@ -10,6 +10,7 @@ import { application } from './configs/application.config';
 import { connectDB } from './database/connectDB';
 import { jsonErrorHandler, notFoundHandler, globalErrorHandler } from './middlewares/errorHandler.middleware';
 import { SocketIOService } from './services/socketio.service';
+import { logger } from './services/logger.service';
 import { bodyParserMiddleware, bodyParserErrorHandler } from './middlewares/bodyParser.middleware';
 import { corsMiddleware } from './middlewares/cors.middleware';
 import { rateLimitMiddleware } from './middlewares/rateLimit.middleware';
@@ -116,7 +117,7 @@ app.use(globalErrorHandler);
 // START SERVER
 // ========================
 server.listen(PORT, () => {
-    console.log(`API is running securely with WebSockets on port ${PORT}`);
+    logger.info(`API is running securely with WebSockets on port ${PORT}`);
     socketService;
 });
 

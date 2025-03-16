@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ApiKey } from '../models/ApiKey';
 import { User } from '../models/User';
-import { Role } from '../models/Role';
 import { logger } from '../services/logger.service';
 
 interface AuthenticatedRequest extends Request {
@@ -55,26 +54,23 @@ export const hasRole = (...roles: string[]) => {
         }
 
         try {
-            const userRole = await Role.findById(req.user.role);
+            const userRole = req.user.role;
 
-            if (!userRole) {
-                logger.warn('Role not found for user', { userId: req.user._id });
-                res.status(403).json({ error: 'Access denied: Role not found' });
-                return;
+            if (roles.length === 0) {
+                logger.info('No role restriction, access granted', { userId: req.user.userId });
+                return next();
             }
 
-            if (!roles.includes(userRole.name)) {
-                logger.warn('User does not have required role', { userId: req.user._id, requiredRoles: roles });
-                res.status(403).json({ error: 'Access denied: Insufficient permissions' });
-                return;
+            if (userRole && roles.includes(userRole)) {
+                logger.info('User has required role', { userId: req.user.userId, role: userRole });
+                return next();
             }
 
-            logger.info('User has required role', { userId: req.user._id, role: userRole.name });
-            return next();
+            logger.warn('User does not have required role', { userId: req.user.userId, requiredRoles: roles });
+            res.status(403).json({ error: 'Access denied: Insufficient permissions' });
         } catch (error: any) {
             logger.error('Error occurred while checking user role', { error: error.message, stack: error.stack });
             res.status(500).json({ error: 'Internal server error' });
-            return;
         }
     };
 };

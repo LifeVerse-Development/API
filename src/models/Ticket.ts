@@ -37,7 +37,7 @@ const TicketSchema = new Schema<ITicket>({
     status: { type: String, enum: ["open", "in-progress", "resolved", "closed"], default: "open" },
     priority: { type: String, enum: ["low", "medium", "high", "urgent"], default: "medium" },
     category: { type: String, required: true },
-    createdAt: { type: String, default: () => new Date().toISOString(), immutable: true }, // createdAt ist unveränderbar
+    createdAt: { type: String, default: () => new Date().toISOString(), immutable: true },
     lastUpdated: { type: String, default: () => new Date().toISOString() },
     assignedTo: { type: String, required: false },
     messages: [
@@ -45,7 +45,7 @@ const TicketSchema = new Schema<ITicket>({
             sender: { type: String, enum: ["user", "support"], required: true },
             senderName: { type: String, required: true },
             content: { type: String, required: true },
-            timestamp: { type: String, default: () => new Date().toISOString(), immutable: true }, // timestamp ist unveränderbar
+            timestamp: { type: String, default: () => new Date().toISOString(), immutable: true },
             attachments: [
                 {
                     name: String,
@@ -85,6 +85,21 @@ TicketSchema.pre('findOneAndUpdate', function (next) {
     const update = this.getUpdate() as any;
     if (update?.$set?.["messages.$.timestamp"]) {
         delete update.$set["messages.$.timestamp"];
+    }
+    next();
+});
+
+TicketSchema.pre('save', function (next) {
+    if (this.category) {
+        this.category = this.category.charAt(0).toUpperCase() + this.category.slice(1);
+    }
+    next();
+});
+
+TicketSchema.pre('findOneAndUpdate', function (next) {
+    const update = this.getUpdate() as any;
+    if (update?.$set?.category) {
+        update.$set.category = update.$set.category.charAt(0).toUpperCase() + update.$set.category.slice(1);
     }
     next();
 });

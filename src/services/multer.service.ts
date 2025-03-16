@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { logger } from './logger.service';
 
-const UPLOAD_DIR = path.join(__dirname, 'uploads');
+const UPLOAD_DIR = path.join(__dirname, '../../uploads');
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 if (!fs.existsSync(UPLOAD_DIR)) {

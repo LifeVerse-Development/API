@@ -1,11 +1,11 @@
 import cors, { type CorsOptions } from "cors"
-import type { Request, Response, NextFunction } from "express"
+import { type Request, type Response, type NextFunction } from "express"
 import { logger } from "../services/logger.service"
-import { config } from "../configs/main.config"
+import { application } from "../configs/application.config"
 
 export const corsOptions: CorsOptions = {
     origin: (origin, callback) => {
-        const allowedOrigins = (process.env.ALLOWED_ORIGINS || config.cors?.allowedOrigins || "http://localhost:3000")
+        const allowedOrigins = (application.cors.allowedOrigins)
             .split(",")
             .map((origin) => origin.trim())
 
@@ -25,9 +25,10 @@ export const corsOptions: CorsOptions = {
         "Content-Type",
         "Authorization",
         "X-API-KEY",
-        "X-CSRF-Token",
+        "X-BETA-KEY",
         "X-Forwarded-For",
         "X-Requested-With",
+        "csrfToken",
         "Accept",
         "Origin",
         "Cache-Control",
@@ -37,7 +38,7 @@ export const corsOptions: CorsOptions = {
         "Access-Control-Allow-Origin",
     ],
     credentials: true,
-    exposedHeaders: ["Authorization", "X-CSRF-Token"],
+    exposedHeaders: ["Authorization", "csrfToken"],
     maxAge: 86400,
 }
 
@@ -51,9 +52,9 @@ export const corsMiddleware = (req: Request, res: Response, next: NextFunction):
                 : req.socket.remoteAddress || "unknown"
 
         if (process.env.NODE_ENV !== "production") {
-            logger.debug(`CORS request from IP: ${ip}, Origin: ${req.headers.origin || "none"}`)
+            console.debug(`CORS request from IP: ${ip}, Origin: ${req.headers.origin || "none"}`)
         } else if (req.method !== "OPTIONS") {
-            logger.info(`Request from IP: ${ip}, Method: ${req.method}, Path: ${req.path}`)
+            console.info(`Request from IP: ${ip}, Method: ${req.method}, Path: ${req.path}`)
         }
 
         cors(corsOptions)(req, res, (err) => {
