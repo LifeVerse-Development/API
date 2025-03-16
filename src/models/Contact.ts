@@ -7,6 +7,8 @@ interface IContact extends Document {
     phone: string;
     message: string;
     replied: boolean;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 const contactSchema = new Schema<IContact>({

@@ -7,6 +7,7 @@ export const createContact: RequestHandler = async (req: Request, res: Response)
         const contact = new Contact({
             ...req.body,
             replied: false,
+            identifier: Math.random().toString(36).substring(2, 15),
         });
         await contact.save();
 
