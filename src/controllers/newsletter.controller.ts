@@ -25,7 +25,10 @@ export const subscribeNewsletter: RequestHandler = async (req: Request, res: Res
             return;
         }
 
-        const subscriber = new NewsletterSubscriber({ email });
+        const subscriber = new NewsletterSubscriber({
+            identifier: Math.random().toString(36).substring(2, 15),
+            email
+        });
         await subscriber.save();
         logger.info("New newsletter subscriber", { email });
 

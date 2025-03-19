@@ -39,6 +39,7 @@ import contactRouter from './routes/contact.router';
 import historyRouter from './routes/history.router';
 import uploadRouter from './routes/upload.router';
 import ticketRouter from './routes/ticket.router';
+import newsletterRouter from "./routes/newsletter.router";
 
 const app = express();
 const server = createServer(app);
@@ -107,6 +108,7 @@ app.use('/api/contacts', contactRouter);
 app.use('/api/histories', historyRouter);
 app.use('/api/uploads', uploadRouter);
 app.use('/api/tickets', ticketRouter);
+app.use("/api/newsletters", newsletterRouter);
 
 // Error handling middleware
 app.use(jsonErrorHandler);

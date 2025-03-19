@@ -1,4 +1,3 @@
-import cors from 'cors';
 import { Router } from 'express';
 import { createUser, getAllUsers, getUserById, updateUser, deleteUser, followUser, unfollowUser, createPost, getFollowStats, getAllPosts, viewPost, updatePost, deletePost } from '../controllers/user.controller';
 import { hasRole } from '../middlewares/authorization.middleware';
@@ -8,7 +7,7 @@ const router = Router();
 
 router.post('/', isAuthenticated, hasRole('Admin', 'Moderator', 'Developer'), createUser);
 router.get('/', isAuthenticated, hasRole('Admin', 'Moderator', 'Developer', 'Content', 'Supporter'), getAllUsers);
-router.get('/:userId', cors({ origin: 'http://localhost:3001/users/:userId' }), getUserById);
+router.get('/:userId', getUserById);
 router.put('/:userId', isAuthenticated, hasRole('Admin', 'Moderator', 'Developer', 'Content', 'Supporter'), updateUser);
 router.delete('/:userId', isAuthenticated, hasRole('Admin', 'Moderator', 'Developer'), deleteUser);
 
