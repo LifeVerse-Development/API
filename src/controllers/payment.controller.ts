@@ -205,6 +205,42 @@ export const createPayment: RequestHandler = async (req: Request, res: Response)
     }
 };
 
+export const getStripeSession: RequestHandler = async (req, res): Promise<void> => {
+    try {
+        const { session_id } = req.query;
+
+        if (!session_id || typeof session_id !== 'string') {
+            res.status(400).json({ message: "Session ID is required and must be a string." });
+            return;
+        }
+
+        const session = await stripe.checkout.sessions.retrieve(session_id);
+
+        if (!session) {
+            res.status(404).json({ message: "Session not found" });
+            return;
+        }
+
+        const payment = await Payment.findOne({ transactionId: session.id });
+
+        if (!payment) {
+            res.status(404).json({ message: "Payment not found in the database" });
+            return;
+        }
+
+        res.json({
+            productName: payment.items[0].name,
+            amount: payment.amount / 100,
+            orderId: payment.identifier,
+            date: payment.paymentDate,
+        });
+
+    } catch (error: any) {
+        console.error("Error retrieving Stripe session:", error);
+        res.status(500).json({ message: "Error retrieving payment session", error: error.message });
+    }
+};
+
 function generatePaymentIdentifier(): string {
     const timestamp = Date.now().toString(36);
     const randomStr = Math.random().toString(36).substring(2, 10);

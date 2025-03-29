@@ -8,7 +8,7 @@ const router = Router();
 router.post('/', isAuthenticated, hasRole('Admin', 'Moderator', 'Developer'), createUser);
 router.get('/', isAuthenticated, hasRole('Admin', 'Moderator', 'Developer', 'Content', 'Supporter'), getAllUsers);
 router.get('/:userId', getUserById);
-router.put('/:userId', isAuthenticated, hasRole('Admin', 'Moderator', 'Developer', 'Content', 'Supporter'), updateUser);
+router.put('/:userId', isAuthenticated, updateUser);
 router.delete('/:userId', isAuthenticated, hasRole('Admin', 'Moderator', 'Developer'), deleteUser);
 
 router.post('/:userId/follow', isAuthenticated, followUser);
