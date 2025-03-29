@@ -40,6 +40,7 @@ import historyRouter from './routes/history.router';
 import uploadRouter from './routes/upload.router';
 import ticketRouter from './routes/ticket.router';
 import newsletterRouter from "./routes/newsletter.router";
+import productRouter from "./routes/product.router";
 
 const app = express();
 const server = createServer(app);
@@ -109,6 +110,7 @@ app.use('/api/histories', historyRouter);
 app.use('/api/uploads', uploadRouter);
 app.use('/api/tickets', ticketRouter);
 app.use("/api/newsletters", newsletterRouter);
+app.use("/api/products", productRouter);
 
 // Error handling middleware
 app.use(jsonErrorHandler);

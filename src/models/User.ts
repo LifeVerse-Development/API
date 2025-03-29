@@ -21,7 +21,9 @@ export interface IUser extends Document {
     titlePicture?: string;
     profilePicture?: string;
     email?: string;
+    phoneNumber?: string;
     username: string;
+    password?: string;
     role: string;
     bio?: string;
     firstName?: string;
@@ -46,6 +48,9 @@ export interface IUser extends Document {
     betaKey: Schema.Types.ObjectId;
     createdAt: Date;
     updatedAt: Date;
+    isTwoFactorEnabled: boolean;
+    twoFactorSecret?: string;
+    twoFactorBackupCodes?: string[];
 }
 
 const userSchema = new Schema<IUser>({
@@ -57,7 +62,9 @@ const userSchema = new Schema<IUser>({
     titlePicture: { type: String, default: '' },
     profilePicture: { type: String, default: '' },
     email: { type: String, default: '' },
+    phoneNumber: { type: String, default: '' },
     username: { type: String, required: true },
+    password: { type: String, default: "", unique: true },
     role: { type: String, default: 'Member', required: true },
     bio: { type: String, default: '' },
     firstName: { type: String, default: '' },
@@ -80,6 +87,9 @@ const userSchema = new Schema<IUser>({
     posts: [{ type: Schema.Types.ObjectId, ref: 'Post' }],
     apiKeys: [{ type: Schema.Types.ObjectId, ref: 'ApiKey' }],
     betaKey: { type: Schema.Types.ObjectId, ref: 'BetaKey' },
+    isTwoFactorEnabled: { type: Boolean, default: false },
+    twoFactorSecret: { type: String, default: null },
+    twoFactorBackupCodes: { type: [String], default: [] },
 }, { timestamps: true });
 
 userSchema.pre('save', function (next) {

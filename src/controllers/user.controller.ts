@@ -1,6 +1,8 @@
 import { Request, Response, RequestHandler } from 'express';
 import { User } from '../models/User';
 import { logger } from '../services/logger.service';
+import bcrypt from 'bcryptjs';
+import { setupAuthenticator, verifyAuthenticator, generateRecoveryCodes as generateRecoveryCodesUtil } from '../utils/2fa.util';
 
 export const createUser: RequestHandler = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -314,5 +316,182 @@ export const deletePost: RequestHandler = async (req: Request, res: Response): P
         res.status(200).json({ message: 'Post deleted successfully' });
     } catch (error: any) {
         res.status(500).json({ message: 'Error deleting post' });
+    }
+};
+
+export const updateUserAccount: RequestHandler = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const userId = req.params.userId;
+        const user = await User.findOne({ userId });
+
+        if (!user) {
+            res.status(404).json({ message: 'User not found' });
+            return;
+        }
+
+        const updatedUser = await User.findOneAndUpdate(
+            { userId },
+            { ...req.body },
+            { new: true }
+        );
+
+        res.status(200).json({
+            message: 'Account updated successfully',
+            user: updatedUser,
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'An error occurred while updating the account' });
+    }
+};
+
+export const updatePassword: RequestHandler = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { currentPassword, newPassword, confirmPassword } = req.body;
+        const userId = req.params.userId;
+
+        const user = await User.findOne({ userId });
+
+        if (!user || !user.password) {
+            res.status(404).json({ message: 'User not found' });
+            return;
+        }
+
+        const passwordMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!passwordMatch) {
+            res.status(400).json({ message: 'Current password is incorrect' });
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            res.status(400).json({ message: 'Passwords do not match' });
+            return;
+        }
+
+        user.password = await bcrypt.hash(newPassword, 10);
+        await user.save();
+
+        res.status(200).json({ message: 'Password updated successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error updating password' });
+    }
+};
+
+export const enableTwoFactorAuthentication = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const userId = req.params.userId;
+
+        if (!userId) {
+            res.status(401).json({ message: 'User ID is missing' });
+            return;
+        }
+
+        const user = await User.findOne({ userId });
+
+        if (!user) {
+            res.status(404).json({ message: 'User not found' });
+            return;
+        }
+
+        const setup = await setupAuthenticator(user);
+        user.twoFactorSecret = setup.secret;
+        user.isTwoFactorEnabled = true;
+        await user.save();
+
+        res.status(200).json({
+            message: 'Two-factor authentication enabled',
+            qrCode: setup.qrCode,
+            secret: setup.secret,
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'An error occurred while enabling two-factor authentication' });
+    }
+};
+
+export const disableTwoFactorAuthentication = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const userId = req.params.userId;
+
+        if (!userId) {
+            res.status(401).json({ message: 'User ID is missing' });
+            return;
+        }
+
+        const user = await User.findOne({ userId });
+
+        if (!user) {
+            res.status(404).json({ message: 'User not found' });
+            return;
+        }
+
+        user.isTwoFactorEnabled = false;
+        user.twoFactorSecret = "";
+        user.twoFactorBackupCodes = [];
+        await user.save();
+
+        res.status(200).json({ message: 'Two-factor authentication disabled' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'An error occurred while disabling two-factor authentication' });
+    }
+};
+
+export const verifyTwoFactorCode = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { verificationCode } = req.body;
+        const userId = req.params.userId;
+
+        if (!userId) {
+            res.status(401).json({ message: 'User ID is missing' });
+            return;
+        }
+
+        const user = await User.findOne({ userId });
+
+        if (!user || !user.isTwoFactorEnabled) {
+            res.status(404).json({ message: 'User or 2FA not found' });
+            return;
+        }
+
+        const isVerified = await verifyAuthenticator(user.twoFactorSecret as string, verificationCode);
+
+        if (!isVerified) {
+            res.status(400).json({ message: 'Invalid verification code' });
+            return;
+        }
+
+        res.status(200).json({ message: 'Two-factor authentication verified successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'An error occurred while verifying the two-factor code' });
+    }
+};
+
+export const generateRecoveryCodes = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const userId = req.params.userId;
+
+        if (!userId) {
+            res.status(401).json({ message: 'User ID is missing' });
+            return;
+        }
+
+        const user = await User.findOne({ userId });
+
+        if (!user || !user.isTwoFactorEnabled) {
+            res.status(404).json({ message: 'User or 2FA not found' });
+            return;
+        }
+
+        const recoveryCodes = generateRecoveryCodesUtil();
+        user.twoFactorBackupCodes = recoveryCodes;
+        await user.save();
+
+        res.status(200).json({ message: 'Recovery codes generated', recoveryCodes });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'An error occurred while generating recovery codes' });
     }
 };
