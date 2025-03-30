@@ -6,88 +6,87 @@ import { config } from "../configs/main.config";
 
 const router = Router();
 
+interface IAddress {
+    street?: string;
+    houseNumber?: string;
+    apartment?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    postalCode?: string;
+}
+
+interface IVerification {
+    verified: boolean;
+    code: string;
+}
+
+interface IAuthenticatorSetup {
+    isEnabled: boolean;
+    qrCode: string;
+    secret: string;
+    verificationCode: string;
+    recoveryCodesGenerated: boolean;
+    recoveryCodes: string[];
+}
+
+interface IPrivacySettings {
+    visibility: "public" | "followers" | "private";
+    showOnlineState: boolean;
+    showActivity: boolean;
+}
+
+interface IPost {
+    identifier: string;
+    image?: string;
+    title?: string;
+    description?: string;
+    content: string;
+    tags: string[];
+    badges: string[];
+    author: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
 interface DiscordUser {
     identifier: string;
     userId: string;
-    socketId: string;
-    accessToken: string;
-    refreshToken: string;
+    socketId?: string;
+    accessToken?: string;
+    refreshToken?: string;
     titlePicture?: string;
     profilePicture?: string;
-    email: string;
+    email?: string;
     username: string;
     role: string;
-    bio?: string;
     firstName?: string;
     middleName?: string;
     lastName?: string;
-    address?: {
-        street: string;
-        houseNumber: string;
-        city: string;
-        state: string;
-        country: string;
-        postalCode: string;
+    password?: string;
+    bio?: string;
+    address?: IAddress;
+    phoneNumber?: string;
+    chats?: string[];
+    groups?: string[];
+    apiKeys?: string[];
+    payments?: string[];
+    stripeCustomerId?: string;
+    follower?: string[];
+    following?: string[];
+    posts?: IPost[];
+    privacySettings?: IPrivacySettings;
+    emailNotification?: boolean;
+    pushNotification?: boolean;
+    language?: string;
+    theme?: "light" | "dark" | "system";
+    verification?: {
+        email: IVerification;
+        discord: IVerification;
+        sms: IVerification;
     };
-    payments?: [{
-        identifier: string;
-        paymentMethod: string;
-        amount: number;
-        currency: string;
-        paymentDate: Date;
-        transactionId: string;
-        createdAt: Date;
-    }];
-    chats?: [{
-        identifier: string;
-        name: string;
-        messages: [string];
-        createdAt: Date;
-    }];
-    groups?: [{
-        identifier: string;
-        image?: string;
-        name: string;
-        description?: string;
-        users: [string];
-        createdAt: Date;
-    }];
-    follower: {
-        userId: string;
-    };
-    following: {
-        userId: string;
-    };
-    posts: [{
-        identifier: string;
-        image?: string;
-        title: string;
-        description: string;
-        content: string;
-        tags: [string];
-        badges: [string];
-        author: string;
-        createdAt: Date;
-    }];
-    apiKeys?: [{
-        identifier: string;
-        name: string;
-        key: string;
-        user: string;
-        expiresAt: Date;
-        isActive: boolean;
-        createdAt: Date;
-    }];
-    betaKey?: {
-        identifier: string;
-        name: string;
-        key: string;
-        isActive: boolean;
-        isExpired: boolean;
-        expireAt: Date;
-        user?: string;
-        createdAt: Date;
-    };
+    authenticatorSetup?: IAuthenticatorSetup;
+    betaKey?: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -123,7 +122,7 @@ router.get("/logout", isAuthenticated, (req: Request, res: Response, next: NextF
         }
         res.clearCookie("connect.sid");
         res.status(200).json({ message: `${req.session.user?.username} been successfully logged out.` });
-        logger.debug(`${req.session.user?.username} successfully logged out.`)
+        logger.debug(`${req.session.user?.username} successfully logged out.`);
     });
 });
 

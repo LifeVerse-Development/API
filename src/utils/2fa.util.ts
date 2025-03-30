@@ -1,46 +1,61 @@
-import speakeasy from 'speakeasy';
-import QRCode from 'qrcode';
+import * as speakeasy from "speakeasy"
+import * as qrcode from "qrcode"
 
-// Funktion zum Einrichten des Authentifikators
-export const setupAuthenticator = async (user: any) => {
+/**
+ * Generates a QR code for two-factor authentication
+ * @param identifier User identifier (email or username)
+ * @returns Object containing QR code URL, secret, and otpauth URL
+ */
+export const generateQRCode = async (
+  identifier: string,
+): Promise<{ qrCode: string; secret: string; otpauthUrl: string }> => {
+  // Generate a secret
   const secret = speakeasy.generateSecret({
-    name: `LifeVerse (${user.username})`,
-    length: 20,
-  });
+    name: `LifeVerse:${identifier}`,
+  })
 
-  // Überprüfen, ob der OTP Auth URL generiert wurde
-  if (!secret.otpauth_url) {
-    throw new Error('Failed to generate OTP auth URL');
-  }
-
-  // QR-Code generieren
-  const qrCode = await QRCode.toDataURL(secret.otpauth_url);
+  // Generate QR code
+  const qrCode = await qrcode.toDataURL(secret.otpauth_url || "")
 
   return {
     qrCode,
     secret: secret.base32,
-  };
-};
+    otpauthUrl: secret.otpauth_url || "",
+  }
+}
 
-// Funktion zum Verifizieren des Authentifikators
-export const verifyAuthenticator = (secret: string, verificationCode: string) => {
-  const isVerified = speakeasy.totp.verify({
+/**
+ * Verifies a TOTP code
+ * @param secret Secret key
+ * @param token Token to verify
+ * @returns Boolean indicating if the token is valid
+ */
+export const verifyTOTP = (secret: string, token: string): boolean => {
+  return speakeasy.totp.verify({
     secret,
-    encoding: 'base32',
-    token: verificationCode,
-  });
+    encoding: "base32",
+    token,
+    window: 1, // Allow 1 step before and after for clock drift
+  })
+}
 
-  return isVerified;
-};
+/**
+ * Generates recovery codes
+ * @param count Number of recovery codes to generate
+ * @returns Array of recovery codes
+ */
+export const generateRecoveryCodes = (count = 10): string[] => {
+  const codes: string[] = []
 
-// Funktion zum Generieren von Wiederherstellungscodes
-export const generateRecoveryCodes = () => {
-  const recoveryCodes: string[] = [];
+  for (let i = 0; i < count; i++) {
+    // Generate a random code in format XXXX-XXXX-XXXX
+    const part1 = Math.random().toString(36).substring(2, 6).toUpperCase()
+    const part2 = Math.random().toString(36).substring(2, 6).toUpperCase()
+    const part3 = Math.random().toString(36).substring(2, 6).toUpperCase()
 
-  for (let i = 0; i < 10; i++) {
-    const code = speakeasy.generateSecret({ length: 6 }).base32;
-    recoveryCodes.push(code);
+    codes.push(`${part1}-${part2}-${part3}`)
   }
 
-  return recoveryCodes;
-};
+  return codes
+}
+
