@@ -26,6 +26,6 @@ export const gateway = {
             user: String(process.env.IMAP_USER),
             pass: String(process.env.IMAP_PASS),
             tls: Boolean(process.env.IMAP_TLS),
-        }
-    }
-}
+        },
+    },
+};

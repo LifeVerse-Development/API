@@ -1,8 +1,8 @@
-import { IAddress } from "./Address";
-import { IAuthenticatorSetup } from "./AuthenticatorSetup";
-import { IPost } from "./Post";
-import { IPrivacySettings } from "./PrivacySettings";
-import { IVerification } from "./Verification";
+import { IAddress } from './Address';
+import { IAuthenticatorSetup } from './AuthenticatorSetup';
+import { IPost } from './Post';
+import { IPrivacySettings } from './PrivacySettings';
+import { IVerification } from './Verification';
 
 export interface DiscordUser {
     identifier: string;
@@ -34,7 +34,7 @@ export interface DiscordUser {
     emailNotification?: boolean;
     pushNotification?: boolean;
     language?: string;
-    theme?: "light" | "dark" | "system";
+    theme?: 'light' | 'dark' | 'system';
     verification?: {
         email: IVerification;
         discord: IVerification;

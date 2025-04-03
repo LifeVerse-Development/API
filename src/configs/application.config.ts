@@ -24,5 +24,5 @@ export const application = {
         resave: Boolean(process.env.SESSION_RESAVE),
         saveUninitialized: Boolean(process.env.SESSION_SAVE_UNINITIALIZED),
         name: String(process.env.SESSION_NAME),
-    }
-}
+    },
+};

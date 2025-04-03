@@ -21,21 +21,27 @@ interface IBeta extends Document {
     toggleBetaSystem(): void;
 }
 
-const betaKeySchema = new Schema<IBetaKey>({
-    identifier: { type: String, required: true, unique: true },
-    name: { type: String, required: true },
-    key: { type: String, required: true, unique: true },
-    isActive: { type: Boolean, default: true },
-    isExpired: { type: Boolean, default: false },
-    expireAt: { type: Date, required: true },
-    user: { type: Schema.Types.ObjectId, ref: 'User' },
-}, { timestamps: true });
+const betaKeySchema = new Schema<IBetaKey>(
+    {
+        identifier: { type: String, required: true, unique: true },
+        name: { type: String, required: true },
+        key: { type: String, required: true, unique: true },
+        isActive: { type: Boolean, default: true },
+        isExpired: { type: Boolean, default: false },
+        expireAt: { type: Date, required: true },
+        user: { type: Schema.Types.ObjectId, ref: 'User' },
+    },
+    { timestamps: true },
+);
 
-const betaSchema = new Schema<IBeta>({
-    identifier: { type: String, required: true, unique: true },
-    isEnabled: { type: Boolean, default: true },
-    keys: { type: [betaKeySchema], default: [] },
-}, { timestamps: true });
+const betaSchema = new Schema<IBeta>(
+    {
+        identifier: { type: String, required: true, unique: true },
+        isEnabled: { type: Boolean, default: true },
+        keys: { type: [betaKeySchema], default: [] },
+    },
+    { timestamps: true },
+);
 
 betaSchema.methods.toggleBetaSystem = function (): void {
     this.isEnabled = !this.isEnabled;

@@ -18,7 +18,7 @@ export const verifyBetaKey = async (req: Request, res: Response, next: NextFunct
             return res.status(403).json({ error: 'Beta system is not enabled' });
         }
 
-        const betaKeyRecord = beta.keys.find((key) => key.key === betaKey);
+        const betaKeyRecord = beta.keys.find(key => key.key === betaKey);
 
         if (!betaKeyRecord) {
             logger.warn('Invalid beta key provided');

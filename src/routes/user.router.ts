@@ -1,35 +1,40 @@
 import { Router } from 'express';
 import {
-  createUser,
-  getAllUsers,
-  getUserById,
-  updateUser,
-  deleteUser,
-  followUser,
-  unfollowUser,
-  getFollowStats,
-  createPost,
-  getAllPosts,
-  getPostById,
-  updatePost,
-  deletePost,
-  updatePassword,
-  setupTwoFactorAuth,
-  verifyTwoFactorAuth,
-  disableTwoFactorAuth,
-  generateRecoveryCodes,
-  verifyEmail,
-  verifyDiscord,
-  verifySMS,
-  updatePrivacySettings,
-  updateNotificationSettings,
-  updatePreferences,
-  logoutAllSessions
+    createUser,
+    getAllUsers,
+    getUserById,
+    updateUser,
+    deleteUser,
+    followUser,
+    unfollowUser,
+    getFollowStats,
+    createPost,
+    getAllPosts,
+    getPostById,
+    updatePost,
+    deletePost,
+    updatePassword,
+    setupTwoFactorAuth,
+    verifyTwoFactorAuth,
+    disableTwoFactorAuth,
+    generateRecoveryCodes,
+    verifyEmail,
+    verifyDiscord,
+    verifySMS,
+    updatePrivacySettings,
+    updateNotificationSettings,
+    updatePreferences,
+    logoutAllSessions,
+    uploadProfileImages,
 } from '../controllers/user.controller';
 import { hasRole } from '../middlewares/authorization.middleware';
 import { isAuthenticated } from '../middlewares/authentication.middleware';
+import { cacheMiddleware } from '../middlewares/cache.middleware';
 
 const router = Router();
+
+// Apply cache middleware to all routes
+router.use(cacheMiddleware());
 
 // User CRUD operations
 router.post('/', isAuthenticated, hasRole('Admin', 'Moderator', 'Developer'), createUser);
@@ -69,5 +74,8 @@ router.put('/:userId/settings/preferences', isAuthenticated, updatePreferences);
 
 // Session management
 router.post('/:userId/logout-all', isAuthenticated, logoutAllSessions);
+
+// Update Profile/Title Picture
+router.post('/:userId/pictures', isAuthenticated, uploadProfileImages);
 
 export default router;

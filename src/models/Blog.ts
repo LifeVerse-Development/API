@@ -28,30 +28,36 @@ interface IBlog extends Document {
     updatedAt: Date;
 }
 
-const commentSchema = new Schema<IComment>({
-    identifier: { type: String, required: true, unique: true },
-    user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    profileImage: { type: String },
-    username: { type: String, required: true },
-    content: { type: String, required: true },
-}, { timestamps: true });
+const commentSchema = new Schema<IComment>(
+    {
+        identifier: { type: String, required: true, unique: true },
+        user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+        profileImage: { type: String },
+        username: { type: String, required: true },
+        content: { type: String, required: true },
+    },
+    { timestamps: true },
+);
 
 const reactionSchema = new Schema<IReaction>({
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     type: { type: String, enum: ['like', 'dislike'], required: true },
 });
 
-const blogSchema = new Schema<IBlog>({
-    identifier: { type: String, required: true, unique: true },
-    image: { type: String },
-    title: { type: String, required: true },
-    description: { type: String, required: true },
-    content: { type: String, required: true },
-    tags: { type: [String], required: true },
-    author: { type: String, required: true },
-    reactions: [reactionSchema],
-    comments: [commentSchema],
-}, { timestamps: true });
+const blogSchema = new Schema<IBlog>(
+    {
+        identifier: { type: String, required: true, unique: true },
+        image: { type: String },
+        title: { type: String, required: true },
+        description: { type: String, required: true },
+        content: { type: String, required: true },
+        tags: { type: [String], required: true },
+        author: { type: String, required: true },
+        reactions: [reactionSchema],
+        comments: [commentSchema],
+    },
+    { timestamps: true },
+);
 
 blogSchema.pre('save', function (next) {
     if (!this.identifier) {

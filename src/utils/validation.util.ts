@@ -4,9 +4,9 @@
  * @returns Boolean indicating if the email is valid
  */
 export const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    return emailRegex.test(email)
-}
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+};
 
 /**
  * Validates a password
@@ -15,9 +15,9 @@ export const validateEmail = (email: string): boolean => {
  */
 export const validatePassword = (password: string): boolean => {
     // At least 8 characters, one uppercase, one lowercase, one number, one special character
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
-    return passwordRegex.test(password)
-}
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    return passwordRegex.test(password);
+};
 
 /**
  * Sanitizes user input to prevent XSS attacks
@@ -25,14 +25,8 @@ export const validatePassword = (password: string): boolean => {
  * @returns Sanitized string
  */
 export const sanitizeInput = (input: string): string => {
-    if (!input) return input
+    if (!input) return input;
 
     // Replace HTML special characters with their entity equivalents
-    return input
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;")
-}
-
+    return input.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+};

@@ -10,7 +10,7 @@ export const maintenanceMiddleware = () => {
             if (maintenance && maintenance.isActive) {
                 logger.warn('Service unavailable due to maintenance', {
                     title: maintenance.title,
-                    message: maintenance.message
+                    message: maintenance.message,
                 });
                 res.status(503).json({ title: maintenance.title, message: maintenance.message });
                 return;

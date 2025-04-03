@@ -1,17 +1,25 @@
-import Stripe from "stripe";
-import type { Request, Response, RequestHandler } from "express";
-import { Payment } from "../models/Payment";
-import { config } from "../configs/main.config";
-import { gateway } from "../configs/gateway.config";
-import { logger } from "../services/logger.service";
+import Stripe from 'stripe';
+import type { Request, Response, RequestHandler } from 'express';
+import { Payment } from '../models/Payment';
+import { config } from '../configs/main.config';
+import { gateway } from '../configs/gateway.config';
+import { logger } from '../services/logger.service';
+import { invalidateCache } from '../middlewares/cache.middleware';
+import { asyncHandler } from '../utils/asyncHandler.util';
+import { withCache } from '../utils/withCache.util';
 
 const stripe = new Stripe(gateway.payment.stripe, {
-    apiVersion: "2025-02-24.acacia",
+    apiVersion: '2025-02-24.acacia',
 });
 
-export const createPayment: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    try {
-        logger.info("Processing payment request", {
+/**
+ * @desc    Create a new payment
+ * @route   POST /api/payments
+ * @access  Private
+ */
+export const createPayment: RequestHandler = withCache(
+    asyncHandler(async (req: Request, res: Response) => {
+        logger.info('Processing payment request', {
             headers: req.headers,
             body: req.body,
             method: req.method,
@@ -19,28 +27,28 @@ export const createPayment: RequestHandler = async (req: Request, res: Response)
         });
 
         if (!req.body) {
-            logger.error("Request body is undefined", {
-                contentType: req.headers["content-type"],
+            logger.error('Request body is undefined', {
+                contentType: req.headers['content-type'],
                 method: req.method,
             });
-            res.status(400).json({ message: "Invalid request: Body is missing" });
+            res.status(400).json({ message: 'Invalid request: Body is missing' });
             return;
         }
 
         const { items, customer, shipping, billing, amount, notes } = req.body;
 
         if (!items || !items.length || !customer || !shipping) {
-            logger.error("Invalid payment request data", {
-                missingFields: !items ? "items" : !customer ? "customer" : !shipping ? "shipping" : "unknown",
+            logger.error('Invalid payment request data', {
+                missingFields: !items ? 'items' : !customer ? 'customer' : !shipping ? 'shipping' : 'unknown',
                 body: req.body,
             });
-            res.status(400).json({ message: "Invalid payment data" });
+            res.status(400).json({ message: 'Invalid payment data' });
             return;
         }
 
         if (!customer.email || !customer.name) {
-            logger.error("Missing customer information", { customer });
-            res.status(400).json({ message: "Customer information is incomplete" });
+            logger.error('Missing customer information', { customer });
+            res.status(400).json({ message: 'Customer information is incomplete' });
             return;
         }
 
@@ -51,14 +59,14 @@ export const createPayment: RequestHandler = async (req: Request, res: Response)
             !shipping.address.postal_code ||
             !shipping.address.country
         ) {
-            logger.error("Missing shipping address information", { shipping });
-            res.status(400).json({ message: "Shipping address is incomplete" });
+            logger.error('Missing shipping address information', { shipping });
+            res.status(400).json({ message: 'Shipping address is incomplete' });
             return;
         }
 
         const lineItems = items.map((item: { id: string; name: string; price: number; quantity: number }) => ({
             price_data: {
-                currency: "eur",
+                currency: 'eur',
                 product_data: {
                     name: item.name,
                     metadata: {
@@ -73,7 +81,7 @@ export const createPayment: RequestHandler = async (req: Request, res: Response)
         if (amount.shipping > 0) {
             lineItems.push({
                 price_data: {
-                    currency: "eur",
+                    currency: 'eur',
                     product_data: {
                         name: `Shipping (${shipping.method})`,
                     },
@@ -88,30 +96,30 @@ export const createPayment: RequestHandler = async (req: Request, res: Response)
         const session = await stripe.checkout.sessions.create({
             customer_email: customer.email,
             line_items: lineItems,
-            mode: "payment",
-            payment_method_types: ["bancontact", "card", "eps", "klarna", "link", "p24", "revolut_pay"],
+            mode: 'payment',
+            payment_method_types: ['bancontact', 'card', 'eps', 'klarna', 'link', 'p24', 'revolut_pay'],
 
             shipping_address_collection: {
-                allowed_countries: ["DE", "AT", "CH", "FR", "NL", "BE"]
+                allowed_countries: ['DE', 'AT', 'CH', 'FR', 'NL', 'BE'],
             },
 
             shipping_options: [
                 {
                     shipping_rate_data: {
-                        type: "fixed_amount",
+                        type: 'fixed_amount',
                         fixed_amount: {
                             amount: Math.round(amount.shipping * 100),
-                            currency: "eur",
+                            currency: 'eur',
                         },
                         display_name: `${shipping.method.charAt(0).toUpperCase() + shipping.method.slice(1)} Shipping`,
                         delivery_estimate: {
                             minimum: {
-                                unit: "business_day",
-                                value: shipping.method === "standard" ? 3 : shipping.method === "express" ? 2 : 1,
+                                unit: 'business_day',
+                                value: shipping.method === 'standard' ? 3 : shipping.method === 'express' ? 2 : 1,
                             },
                             maximum: {
-                                unit: "business_day",
-                                value: shipping.method === "standard" ? 5 : shipping.method === "express" ? 3 : 1,
+                                unit: 'business_day',
+                                value: shipping.method === 'standard' ? 5 : shipping.method === 'express' ? 3 : 1,
                             },
                         },
                     },
@@ -120,43 +128,43 @@ export const createPayment: RequestHandler = async (req: Request, res: Response)
             success_url: `${config.frontendUrl}/success_payment?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${config.frontendUrl}/cancel_payment`,
             metadata: {
-                notes: notes || "",
+                notes: notes || '',
                 order_total: amount.total.toString(),
                 tax: amount.tax.toString(),
                 subtotal: amount.subtotal.toString(),
                 customer_name: customer.name,
                 customer_email: customer.email,
-                customer_phone: customer.phone || "",
+                customer_phone: customer.phone || '',
                 shipping_method: shipping.method,
                 shipping_address_line1: shipping.address.line1,
-                shipping_address_line2: shipping.address.line2 || "",
+                shipping_address_line2: shipping.address.line2 || '',
                 shipping_address_city: shipping.address.city,
-                shipping_address_state: shipping.address.state || "",
+                shipping_address_state: shipping.address.state || '',
                 shipping_address_postal_code: shipping.address.postal_code,
                 shipping_address_country: shipping.address.country,
-                billing_same_as_shipping: billing ? "false" : "true",
+                billing_same_as_shipping: billing ? 'false' : 'true',
             },
         });
 
         const payment = new Payment({
             identifier: generatePaymentIdentifier(),
-            paymentMethod: "stripe",
+            paymentMethod: 'stripe',
             amount: amount.total,
-            currency: "eur",
+            currency: 'eur',
             paymentDate: new Date(),
             transactionId: session.id,
-            status: "pending",
+            status: 'pending',
             customerInfo: {
                 name: customer.name,
                 email: customer.email,
-                phone: customer.phone || "",
+                phone: customer.phone || '',
             },
             shippingInfo: {
                 address: {
                     line1: shipping.address.line1,
-                    line2: shipping.address.line2 || "",
+                    line2: shipping.address.line2 || '',
                     city: shipping.address.city,
-                    state: shipping.address.state || "",
+                    state: shipping.address.state || '',
                     postalCode: shipping.address.postal_code,
                     country: shipping.address.country,
                 },
@@ -172,13 +180,16 @@ export const createPayment: RequestHandler = async (req: Request, res: Response)
 
         await payment.save();
 
-        logger.info("Payment record created", {
+        // Invalidate any existing payment caches
+        await invalidateCache([`cache:*/api/payments*`, `payments:all*`, `payments:customer:${customer.email}*`]);
+
+        logger.info('Payment record created', {
             paymentId: payment._id,
             identifier: payment.identifier,
             sessionId: session.id,
         });
 
-        logger.info("Stripe session created", {
+        logger.info('Stripe session created', {
             sessionId: session.id,
             url: session.url,
         });
@@ -188,43 +199,34 @@ export const createPayment: RequestHandler = async (req: Request, res: Response)
             sessionId: session.id,
             paymentIdentifier: payment.identifier,
         });
-    } catch (error: any) {
-        logger.error("Payment processing error:", {
-            error: error.message,
-            stack: error.stack,
-            code: error.code || "unknown",
-        });
+    }),
+);
 
-        if (error.type === "StripeCardError") {
-            res.status(400).json({ message: "Payment card error", error: error.message });
-        } else if (error.type === "StripeInvalidRequestError") {
-            res.status(400).json({ message: "Invalid payment request", error: error.message });
-        } else {
-            res.status(500).json({ message: "Payment processing failed", error: error.message });
-        }
-    }
-};
-
-export const getStripeSession: RequestHandler = async (req, res): Promise<void> => {
-    try {
+/**
+ * @desc    Get Stripe session details
+ * @route   GET /api/payments/session
+ * @access  Private
+ */
+export const getStripeSession: RequestHandler = withCache(
+    asyncHandler(async (req: Request, res: Response) => {
         const { session_id } = req.query;
 
         if (!session_id || typeof session_id !== 'string') {
-            res.status(400).json({ message: "Session ID is required and must be a string." });
+            res.status(400).json({ message: 'Session ID is required and must be a string.' });
             return;
         }
 
         const session = await stripe.checkout.sessions.retrieve(session_id);
 
         if (!session) {
-            res.status(404).json({ message: "Session not found" });
+            res.status(404).json({ message: 'Session not found' });
             return;
         }
 
         const payment = await Payment.findOne({ transactionId: session.id });
 
         if (!payment) {
-            res.status(404).json({ message: "Payment not found in the database" });
+            res.status(404).json({ message: 'Payment not found in the database' });
             return;
         }
 
@@ -234,12 +236,108 @@ export const getStripeSession: RequestHandler = async (req, res): Promise<void> 
             orderId: payment.identifier,
             date: payment.paymentDate,
         });
+    }),
+);
 
-    } catch (error: any) {
-        console.error("Error retrieving Stripe session:", error);
-        res.status(500).json({ message: "Error retrieving payment session", error: error.message });
-    }
-};
+/**
+ * @desc    Get payment status
+ * @route   GET /api/payments/status/:transactionId
+ * @access  Private
+ */
+export const getPaymentStatus: RequestHandler = withCache(
+    asyncHandler(async (req: Request, res: Response) => {
+        const { transactionId } = req.params;
+
+        if (!transactionId) {
+            res.status(400).json({ message: 'Session ID is required' });
+            return;
+        }
+
+        const session = await stripe.checkout.sessions.retrieve(transactionId);
+        const payment = await Payment.findOne({ transactionId: transactionId });
+
+        if (!payment) {
+            res.status(404).json({ message: 'Payment not found' });
+            return;
+        }
+
+        // If payment status has changed, update it and invalidate cache
+        if (session.payment_status === 'paid' && payment.status !== 'completed') {
+            payment.status = 'completed';
+            await payment.save();
+
+            // Invalidate related caches
+            await invalidateCache([
+                `cache:*/api/payments/status/${transactionId}*`,
+                `cache:*/api/payments*`,
+                `payments:${transactionId}*`,
+                `payments:customer:${payment.customerInfo.email}*`,
+            ]);
+
+            logger.info('Payment status updated to completed', { transactionId });
+        }
+
+        res.json({
+            paymentStatus: payment.status,
+            stripeStatus: session.payment_status,
+            paymentIdentifier: payment.identifier,
+        });
+    }),
+);
+
+/**
+ * @desc    Get all payments
+ * @route   GET /api/payments
+ * @access  Private/Admin
+ */
+export const getAllPayments: RequestHandler = withCache(
+    asyncHandler(async (_req: Request, res: Response) => {
+        const payments = await Payment.find().sort({ paymentDate: -1 });
+
+        res.json({
+            count: payments.length,
+            payments,
+        });
+    }),
+);
+
+/**
+ * @desc    Get payment by identifier
+ * @route   GET /api/payments/:identifier
+ * @access  Private
+ */
+export const getPaymentByIdentifier: RequestHandler = withCache(
+    asyncHandler(async (req: Request, res: Response) => {
+        const { identifier } = req.params;
+
+        const payment = await Payment.findOne({ identifier });
+
+        if (!payment) {
+            res.status(404).json({ message: 'Payment not found' });
+            return;
+        }
+
+        res.json(payment);
+    }),
+);
+
+/**
+ * @desc    Get payments by customer email
+ * @route   GET /api/payments/customer/:email
+ * @access  Private
+ */
+export const getPaymentsByCustomer: RequestHandler = withCache(
+    asyncHandler(async (req: Request, res: Response) => {
+        const { email } = req.params;
+
+        const payments = await Payment.find({ 'customerInfo.email': email }).sort({ paymentDate: -1 });
+
+        res.json({
+            count: payments.length,
+            payments,
+        });
+    }),
+);
 
 function generatePaymentIdentifier(): string {
     const timestamp = Date.now().toString(36);
@@ -249,47 +347,13 @@ function generatePaymentIdentifier(): string {
 
 function getCountryCode(countryName: string): string {
     const countryMap: Record<string, string> = {
-        Germany: "DE",
-        Austria: "AT",
-        Switzerland: "CH",
-        France: "FR",
-        Netherlands: "NL",
-        Belgium: "BE",
+        Germany: 'DE',
+        Austria: 'AT',
+        Switzerland: 'CH',
+        France: 'FR',
+        Netherlands: 'NL',
+        Belgium: 'BE',
     };
 
-    return countryMap[countryName] || "DE";
+    return countryMap[countryName] || 'DE';
 }
-
-export const getPaymentStatus: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { transactionId } = req.params;
-
-        if (!transactionId) {
-            res.status(400).json({ message: "Session ID is required" });
-            return;
-        }
-
-        const session = await stripe.checkout.sessions.retrieve(transactionId);
-        const payment = await Payment.findOne({ transactionId: transactionId });
-
-        if (!payment) {
-            res.status(404).json({ message: "Payment not found" });
-            return;
-        }
-
-        if (session.payment_status === "paid" && payment.status !== "completed") {
-            payment.status = "completed";
-            await payment.save();
-            logger.info("Payment status updated to completed", { transactionId });
-        }
-
-        res.json({
-            paymentStatus: payment.status,
-            stripeStatus: session.payment_status,
-            paymentIdentifier: payment.identifier,
-        });
-    } catch (error: any) {
-        logger.error("Error retrieving payment status:", { error: error.message });
-        res.status(500).json({ message: "Unable to retrieve payment status", error: error.message });
-    }
-};

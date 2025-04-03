@@ -1,46 +1,46 @@
 stages:
-  - build
-  - deploy
+    - build
+    - deploy
 
 variables:
-  GITHUB_REPO: "LifeVerse-Development/API"
-  GIT_AUTHOR_NAME: "LifeVerse-Development"
-  GIT_AUTHOR_EMAIL: "lifeversegame@gmail.com"
-  GIT_COMMITTER_NAME: "GitLab CI/CD"
-  GIT_COMMITTER_EMAIL: "gitlab-ci@example.com"
+    GITHUB_REPO: 'LifeVerse-Development/API'
+    GIT_AUTHOR_NAME: 'LifeVerse-Development'
+    GIT_AUTHOR_EMAIL: 'lifeversegame@gmail.com'
+    GIT_COMMITTER_NAME: 'GitLab CI/CD'
+    GIT_COMMITTER_EMAIL: 'gitlab-ci@example.com'
 
 build:
-  stage: build
-  image: node:16
-  before_script:
-    - npm install
-  script:
-    - echo "Starting Build..."
-    - npm run build
-  only:
-    - development
-    - main
+    stage: build
+    image: node:16
+    before_script:
+        - npm install
+    script:
+        - echo "Starting Build..."
+        - npm run build
+    only:
+        - development
+        - main
 
 deploy_to_github:
-  stage: deploy
-  script:
-    - echo "Starte Deployment nach GitHub..."
+    stage: deploy
+    script:
+        - echo "Starte Deployment nach GitHub..."
 
-    - git config --global user.name "$GIT_AUTHOR_NAME"
-    - git config --global user.email "$GIT_AUTHOR_EMAIL"
+        - git config --global user.name "$GIT_AUTHOR_NAME"
+        - git config --global user.email "$GIT_AUTHOR_EMAIL"
 
-    - git clone --bare https://oauth2:${CI_JOB_TOKEN}@gitlab.com/${CI_PROJECT_PATH}.git temp-repo
-    - cd temp-repo
+        - git clone --bare https://oauth2:${CI_JOB_TOKEN}@gitlab.com/${CI_PROJECT_PATH}.git temp-repo
+        - cd temp-repo
 
-    - git remote add github https://oauth2:${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git
+        - git remote add github https://oauth2:${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git
 
-    - git fetch github --tags
+        - git fetch github --tags
 
-    - git push --force github --all
-    - git push --force github --tags
+        - git push --force github --all
+        - git push --force github --tags
 
-    - cd ..
-    - rm -rf temp-repo
+        - cd ..
+        - rm -rf temp-repo
 
-  only:
-    - main
+    only:
+        - main

@@ -4,7 +4,7 @@ export class ArrayUtil {
     }
 
     public static chunk<T>(array: T[], chunkSize: number): T[][] {
-        if (chunkSize <= 0) throw new Error("Chunk size must be greater than 0");
+        if (chunkSize <= 0) throw new Error('Chunk size must be greater than 0');
         const result: T[][] = [];
         for (let i = 0; i < array.length; i += chunkSize) {
             result.push(array.slice(i, i + chunkSize));
@@ -49,7 +49,7 @@ export class ArrayUtil {
     }
 
     public static range(start: number, end: number, step: number = 1): number[] {
-        if (step <= 0) throw new Error("Step must be greater than 0");
+        if (step <= 0) throw new Error('Step must be greater than 0');
         const result: number[] = [];
         for (let i = start; i <= end; i += step) {
             result.push(i);
@@ -57,7 +57,7 @@ export class ArrayUtil {
         return result;
     }
 
-    public static isEmpty<T>(array: (T | null | undefined | "")[]): boolean {
-        return array.length === 0 || array.every(item => item === null || item === undefined || item === "");
+    public static isEmpty<T>(array: (T | null | undefined | '')[]): boolean {
+        return array.length === 0 || array.every(item => item === null || item === undefined || item === '');
     }
 }

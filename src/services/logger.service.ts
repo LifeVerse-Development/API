@@ -17,7 +17,7 @@ export const logger = winston.createLogger({
         winston.format.json(),
         winston.format.printf(({ timestamp, level, message, meta }) => {
             return `[${timestamp}] [${level}] ${message} ${meta ? JSON.stringify(meta) : ''}`;
-        })
+        }),
     ),
     transports: [
         new winston.transports.File({
@@ -33,16 +33,13 @@ export const logger = winston.createLogger({
             maxFiles: 5,
         }),
         new winston.transports.Console({
-            format: winston.format.combine(
-                winston.format.colorize(),
-                winston.format.simple()
-            ),
+            format: winston.format.combine(winston.format.colorize(), winston.format.simple()),
             level: application.env === 'production' ? 'info' : 'debug',
         }),
     ],
 });
 
-logger.on('data', async (log) => {
+logger.on('data', async log => {
     const { level, message, timestamp } = log;
     if (['error', 'warn', 'debug'].includes(level)) {
         try {

@@ -25,4 +25,4 @@ emailSchema.pre('save', function (next) {
     next();
 });
 
-export const Email = model<IEmail>("Email", emailSchema);
+export const Email = model<IEmail>('Email', emailSchema);

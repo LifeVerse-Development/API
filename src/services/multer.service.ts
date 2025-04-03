@@ -16,10 +16,10 @@ const storage = multer.diskStorage({
         cb(null, UPLOAD_DIR);
     },
     filename: (_req: Request, file: Express.Multer.File, cb: Function) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
         const extname = path.extname(file.originalname);
         cb(null, file.fieldname + '-' + uniqueSuffix + extname);
-    }
+    },
 });
 
 const fileFilter = (_req: Request, file: Express.Multer.File, cb: Function) => {
@@ -35,7 +35,7 @@ const fileFilter = (_req: Request, file: Express.Multer.File, cb: Function) => {
 const upload = multer({
     storage: storage,
     limits: { fileSize: MAX_FILE_SIZE },
-    fileFilter: fileFilter
+    fileFilter: fileFilter,
 });
 
 export const uploadSingle = (fieldName: string) => {
@@ -70,7 +70,7 @@ export const getFilePath = (filename: string) => {
 
 export const deleteFile = (filename: string): void => {
     const filePath = getFilePath(filename);
-    fs.unlink(filePath, (err) => {
+    fs.unlink(filePath, err => {
         if (err) {
             logger.error('Failed to delete file', { error: err.message });
         } else {

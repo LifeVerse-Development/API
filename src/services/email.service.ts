@@ -1,10 +1,10 @@
-import nodemailer from "nodemailer";
-import { Email } from "../models/Email";
-import { simpleParser, ParsedMail, AddressObject } from "mailparser";
-import { logger } from "../services/logger.service";
-import imapClient, { ImapSimple, ImapSimpleOptions } from "imap-simple";
-import { Config } from "imap";
-import { gateway } from "../configs/gateway.config";
+import nodemailer from 'nodemailer';
+import { Email } from '../models/Email';
+import { simpleParser, ParsedMail, AddressObject } from 'mailparser';
+import { logger } from '../services/logger.service';
+import imapClient, { ImapSimple, ImapSimpleOptions } from 'imap-simple';
+import { Config } from 'imap';
+import { gateway } from '../configs/gateway.config';
 
 // Function to get profile picture URL (Placeholder function, implement as needed)
 const getProfilePicture = async (): Promise<string | null> => {
@@ -30,7 +30,7 @@ const createTransporter = () => {
 // Sends an email and stores it in the database
 export const sendEmail = async (to: string, subject: string, text: string, html: string) => {
     try {
-        if (!to) throw new Error("Recipient email (to) is required.");
+        if (!to) throw new Error('Recipient email (to) is required.');
 
         const transporter = createTransporter();
         const mailOptions = {
@@ -59,8 +59,8 @@ export const sendEmail = async (to: string, subject: string, text: string, html:
 
         return email;
     } catch (error: any) {
-        logger.error("Error sending email:", { error: error.message, stack: error.stack });
-        throw new Error("Failed to send email");
+        logger.error('Error sending email:', { error: error.message, stack: error.stack });
+        throw new Error('Failed to send email');
     }
 };
 
@@ -72,20 +72,20 @@ export const getEmails = async () => {
 // Retrieves a specific email by its ID
 export const getEmailById = async (emailId: string) => {
     const email = await Email.findById(emailId);
-    if (!email) throw new Error("Email not found");
+    if (!email) throw new Error('Email not found');
     return email;
 };
 
 // Deletes all stored emails
 export const deleteAllEmails = async () => {
     await Email.deleteMany();
-    logger.info("All stored emails have been deleted.");
+    logger.info('All stored emails have been deleted.');
 };
 
 // Deletes a specific email by its ID
 export const deleteEmailById = async (emailId: string) => {
     const email = await Email.findByIdAndDelete(emailId);
-    if (!email) throw new Error("Email not found");
+    if (!email) throw new Error('Email not found');
     return email;
 };
 
@@ -103,8 +103,8 @@ export const fetchAndStoreEmails = async () => {
         logger.info(`${missingEmails.length} new emails have been stored.`);
         return missingEmails;
     } catch (error: any) {
-        logger.error("Error fetching new emails:", { error: error.message, stack: error.stack });
-        throw new Error("Failed to fetch and store emails");
+        logger.error('Error fetching new emails:', { error: error.message, stack: error.stack });
+        throw new Error('Failed to fetch and store emails');
     }
 };
 
@@ -112,9 +112,9 @@ export const fetchAndStoreEmails = async () => {
 const getNewEmails = async () => {
     const config: ImapSimpleOptions = {
         imap: {
-            user: gateway.email.imap.user || "",
-            password: gateway.email.imap.pass || "",
-            host: gateway.email.imap.host || "",
+            user: gateway.email.imap.user || '',
+            password: gateway.email.imap.pass || '',
+            host: gateway.email.imap.host || '',
             port: gateway.email.imap.port || 993,
             tls: gateway.email.imap.tls ?? true,
             authTimeout: 10000,
@@ -124,52 +124,52 @@ const getNewEmails = async () => {
     let connection: ImapSimple | null = null;
     try {
         connection = await imapClient.connect(config);
-        await connection.openBox("INBOX");
+        await connection.openBox('INBOX');
 
-        const searchCriteria = ["UNSEEN"];
+        const searchCriteria = ['UNSEEN'];
         const fetchOptions = {
-            bodies: ["HEADER.FIELDS (FROM TO SUBJECT DATE)", "TEXT"],
+            bodies: ['HEADER.FIELDS (FROM TO SUBJECT DATE)', 'TEXT'],
             struct: true,
         };
 
         const results = await connection.search(searchCriteria, fetchOptions);
 
         const emails = await Promise.all(
-            results.map(async (result) => {
+            results.map(async result => {
                 try {
-                    const textPart = result.parts.find((part) => part.which === "TEXT");
+                    const textPart = result.parts.find(part => part.which === 'TEXT');
                     if (!textPart) {
-                        logger.warn("No TEXT part found in the email.");
+                        logger.warn('No TEXT part found in the email.');
                         return null;
                     }
 
                     const parsed: ParsedMail = await simpleParser(textPart.body);
                     const toEmail = Array.isArray(parsed.to)
-                        ? parsed.to.flatMap((addr: AddressObject) => addr.value.map((v) => v.address)).join(", ")
-                        : parsed.to?.value.map((v) => v.address).join(", ");
-                    
+                        ? parsed.to.flatMap((addr: AddressObject) => addr.value.map(v => v.address)).join(', ')
+                        : parsed.to?.value.map(v => v.address).join(', ');
+
                     return {
                         identifier: Math.random().toString(36).substring(2, 15),
                         to: toEmail,
-                        subject: parsed.subject || "No Subject",
-                        text: parsed.text || "",
-                        html: parsed.html || "",
+                        subject: parsed.subject || 'No Subject',
+                        text: parsed.text || '',
+                        html: parsed.html || '',
                     };
                 } catch (parseError: any) {
-                    logger.error("Error parsing an email:", { error: parseError.message });
+                    logger.error('Error parsing an email:', { error: parseError.message });
                     return null;
                 }
-            })
+            }),
         );
 
-        return emails.filter((email) => email !== null);
+        return emails.filter(email => email !== null);
     } catch (error: any) {
-        logger.error("Error fetching IMAP emails:", { error: error.message, stack: error.stack });
-        throw new Error("Failed to fetch new emails");
+        logger.error('Error fetching IMAP emails:', { error: error.message, stack: error.stack });
+        throw new Error('Failed to fetch new emails');
     } finally {
         if (connection) {
             await connection.end();
-            logger.info("IMAP connection successfully closed.");
+            logger.info('IMAP connection successfully closed.');
         }
     }
 };

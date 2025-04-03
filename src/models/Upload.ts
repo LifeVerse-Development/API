@@ -11,14 +11,17 @@ interface IUpload extends Document {
     updatedAt: Date;
 }
 
-const uploadSchema = new Schema<IUpload>({
-    identifier: { type: String, required: true, unique: true },
-    userId: { type: String, required: true },
-    filename: { type: String, required: true },
-    filePath: { type: String, required: true },
-    fileType: { type: String, required: true },
-    size: { type: Number, required: true },
-}, { timestamps: true });
+const uploadSchema = new Schema<IUpload>(
+    {
+        identifier: { type: String, required: true, unique: true },
+        userId: { type: String, required: true },
+        filename: { type: String, required: true },
+        filePath: { type: String, required: true },
+        fileType: { type: String, required: true },
+        size: { type: Number, required: true },
+    },
+    { timestamps: true },
+);
 
 uploadSchema.pre('save', function (next) {
     if (!this.identifier) {

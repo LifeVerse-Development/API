@@ -12,10 +12,7 @@ const NewsletterSubscriberSchema = new Schema<INewsletterSubscriber>({
     subscribedAt: { type: Date, default: Date.now },
 });
 
-export const NewsletterSubscriber = model<INewsletterSubscriber>(
-    "NewsletterSubscriber",
-    NewsletterSubscriberSchema
-);
+export const NewsletterSubscriber = model<INewsletterSubscriber>('NewsletterSubscriber', NewsletterSubscriberSchema);
 
 NewsletterSubscriberSchema.pre('save', function (next) {
     if (!this.identifier) {
@@ -45,4 +42,4 @@ NewsletterSchema.pre('save', function (next) {
     next();
 });
 
-export const Newsletter = model<INewsletter>("Newsletter", NewsletterSchema);
+export const Newsletter = model<INewsletter>('Newsletter', NewsletterSchema);

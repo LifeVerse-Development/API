@@ -2,8 +2,11 @@ import { Router } from 'express';
 import { sendSms, sendReminder, getAllSms, getSmsById, getAllReminders, getReminderById } from '../controllers/sms.controller';
 import { hasRole } from '../middlewares/authorization.middleware';
 import { isAuthenticated } from '../middlewares/authentication.middleware';
+import { cacheMiddleware } from '../middlewares/cache.middleware';
 
 const router = Router();
+
+router.use(cacheMiddleware());
 
 router.post('/send', isAuthenticated, sendSms);
 router.post('/reminder', isAuthenticated, sendReminder);

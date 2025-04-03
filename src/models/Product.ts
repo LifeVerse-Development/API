@@ -24,25 +24,30 @@ export interface IProduct extends Document {
     updatedAt: Date;
 }
 
-const ProductSchema: Schema = new Schema<IProduct>({
-    identifier: { type: String, required: true, unique: true },
-    name: { type: String, required: true },
-    description: { type: String, required: true },
-    price: { type: Number, required: true },
-    image: { type: String, required: true },
-    category: { type: String, required: true },
-    rating: { type: Number, required: true },
-    featured: { type: Boolean, default: false },
-    new: { type: Boolean, default: false },
-    details: { type: [String], default: [] },
-    specifications: { type: Map, of: String, default: {} },
-    reviews: [{
-        user: { type: String, required: true },
+const ProductSchema: Schema = new Schema<IProduct>(
+    {
+        identifier: { type: String, required: true, unique: true },
+        name: { type: String, required: true },
+        description: { type: String, required: true },
+        price: { type: Number, required: true },
+        image: { type: String, required: true },
+        category: { type: String, required: true },
         rating: { type: Number, required: true },
-        comment: { type: String, required: true },
-        createdAt: { type: Date, default: Date.now }
-    }],
-}, { timestamps: true });
+        featured: { type: Boolean, default: false },
+        new: { type: Boolean, default: false },
+        details: { type: [String], default: [] },
+        specifications: { type: Map, of: String, default: {} },
+        reviews: [
+            {
+                user: { type: String, required: true },
+                rating: { type: Number, required: true },
+                comment: { type: String, required: true },
+                createdAt: { type: Date, default: Date.now },
+            },
+        ],
+    },
+    { timestamps: true },
+);
 
 ProductSchema.pre('save', function (next) {
     if (!this.identifier) {
@@ -51,4 +56,4 @@ ProductSchema.pre('save', function (next) {
     next();
 });
 
-export default model<IProduct>("Product", ProductSchema);
+export default model<IProduct>('Product', ProductSchema);

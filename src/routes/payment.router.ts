@@ -2,8 +2,11 @@ import { Router } from 'express';
 import { createPayment, getStripeSession, getPaymentStatus } from '../controllers/payment.controller';
 //import { hasRole } from '../middlewares/authorization.middleware';
 import { isAuthenticated } from '../middlewares/authentication.middleware';
+import { cacheMiddleware } from '../middlewares/cache.middleware';
 
 const router = Router();
+
+router.use(cacheMiddleware());
 
 router.post('/', isAuthenticated, createPayment);
 router.get('/:sessionId', isAuthenticated, getStripeSession);

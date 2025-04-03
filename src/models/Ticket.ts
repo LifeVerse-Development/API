@@ -1,7 +1,7 @@
 import { Schema, model, Document } from 'mongoose';
 
-export type TicketStatus = "open" | "in-progress" | "resolved" | "closed";
-export type TicketPriority = "low" | "medium" | "high" | "urgent";
+export type TicketStatus = 'open' | 'in-progress' | 'resolved' | 'closed';
+export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent';
 
 interface Attachment {
     name: string;
@@ -10,7 +10,7 @@ interface Attachment {
 }
 
 interface Message {
-    sender: "user" | "support";
+    sender: 'user' | 'support';
     senderName: string;
     content: string;
     timestamp: string;
@@ -34,15 +34,15 @@ const TicketSchema = new Schema<ITicket>({
     identifier: { type: String, required: true, unique: true },
     subject: { type: String, required: true },
     description: { type: String, required: true },
-    status: { type: String, enum: ["open", "in-progress", "resolved", "closed"], default: "open" },
-    priority: { type: String, enum: ["low", "medium", "high", "urgent"], default: "medium" },
+    status: { type: String, enum: ['open', 'in-progress', 'resolved', 'closed'], default: 'open' },
+    priority: { type: String, enum: ['low', 'medium', 'high', 'urgent'], default: 'medium' },
     category: { type: String, required: true },
     createdAt: { type: String, default: () => new Date().toISOString(), immutable: true },
     lastUpdated: { type: String, default: () => new Date().toISOString() },
     assignedTo: { type: String, required: false },
     messages: [
         {
-            sender: { type: String, enum: ["user", "support"], required: true },
+            sender: { type: String, enum: ['user', 'support'], required: true },
             senderName: { type: String, required: true },
             content: { type: String, required: true },
             timestamp: { type: String, default: () => new Date().toISOString(), immutable: true },
@@ -83,8 +83,8 @@ TicketSchema.pre('save', function (next) {
 
 TicketSchema.pre('findOneAndUpdate', function (next) {
     const update = this.getUpdate() as any;
-    if (update?.$set?.["messages.$.timestamp"]) {
-        delete update.$set["messages.$.timestamp"];
+    if (update?.$set?.['messages.$.timestamp']) {
+        delete update.$set['messages.$.timestamp'];
     }
     next();
 });
@@ -104,4 +104,4 @@ TicketSchema.pre('findOneAndUpdate', function (next) {
     next();
 });
 
-export const Ticket = model<ITicket>("Ticket", TicketSchema);
+export const Ticket = model<ITicket>('Ticket', TicketSchema);
