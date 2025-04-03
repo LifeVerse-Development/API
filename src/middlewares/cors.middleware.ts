@@ -51,10 +51,10 @@ export const corsMiddleware = (req: Request, res: Response, next: NextFunction):
                 ? forwardedFor.split(",")[0].trim()
                 : req.socket.remoteAddress || "unknown"
 
-        if (process.env.NODE_ENV !== "production") {
-            console.debug(`CORS request from IP: ${ip}, Origin: ${req.headers.origin || "none"}`)
+        if (application.env !== "production") {
+            logger.debug(`CORS request from IP: ${ip}, Origin: ${req.headers.origin || "none"}`)
         } else if (req.method !== "OPTIONS") {
-            console.info(`Request from IP: ${ip}, Method: ${req.method}, Path: ${req.path}`)
+            logger.info(`Request from IP: ${ip}, Method: ${req.method}, Path: ${req.path}`)
         }
 
         cors(corsOptions)(req, res, (err) => {

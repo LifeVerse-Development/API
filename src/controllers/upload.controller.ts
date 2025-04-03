@@ -1,4 +1,4 @@
-import { Request, Response, RequestHandler } from 'express';
+import type { Request, RequestHandler, Response } from 'express';
 import { Upload } from '../models/Upload';
 import { getFilePath, deleteFile } from '../services/multer.service';
 import { logger } from '../services/logger.service';

@@ -8,6 +8,7 @@ import { validateEmail, validatePassword, sanitizeInput } from "../utils/validat
 import { redisClient } from "../utils/redis.util"
 import { asyncHandler } from "../utils/asyncHandler.util"
 import { createRateLimit } from "../middlewares/rateLimit.middleware"
+import { uploadSingle, deleteFile } from "../services/multer.service"
 
 // Cache TTL in seconds
 const CACHE_TTL = 300 // 5 minutes
@@ -64,6 +65,24 @@ export const createUser = asyncHandler(async (req: Request, res: Response) => {
         hashedPassword = await bcrypt.hash(password, 12)
     }
 
+    // Handle file uploads for profile and title pictures
+    let profilePicturePath = undefined
+    let titlePicturePath = undefined
+
+    if (req.files) {
+        const files = req.files as { [fieldname: string]: Express.Multer.File[] }
+
+        // Handle profile picture
+        if (files.profilePicture && files.profilePicture[0]) {
+            profilePicturePath = files.profilePicture[0].filename
+        }
+
+        // Handle title picture
+        if (files.titlePicture && files.titlePicture[0]) {
+            titlePicturePath = files.titlePicture[0].filename
+        }
+    }
+
     // Create new user with sanitized inputs
     const newUser = new User({
         identifier: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
@@ -74,6 +93,8 @@ export const createUser = asyncHandler(async (req: Request, res: Response) => {
         firstName: firstName ? sanitizeInput(firstName) : undefined,
         middleName: middleName ? sanitizeInput(middleName) : undefined,
         lastName: lastName ? sanitizeInput(lastName) : undefined,
+        profilePicture: profilePicturePath,
+        titlePicture: titlePicturePath,
         address: address
             ? {
                 street: sanitizeInput(address.street),
@@ -224,6 +245,15 @@ export const getUserById = asyncHandler(async (req: Request, res: Response) => {
         })
     }
 
+    // Transform file paths to full URLs if needed
+    if (user.profilePicture) {
+        user.profilePicture = `/api/uploads/${user.profilePicture}`
+    }
+
+    if (user.titlePicture) {
+        user.titlePicture = `/api/uploads/${user.titlePicture}`
+    }
+
     const response = {
         success: true,
         message: "User fetched successfully",
@@ -282,6 +312,21 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
         })
     }
 
+    // Handle file uploads for profile and title pictures
+    if (req.files) {
+        const files = req.files as { [fieldname: string]: Express.Multer.File[] }
+
+        // Handle profile picture
+        if (files.profilePicture && files.profilePicture[0]) {
+            updateData.profilePicture = files.profilePicture[0].filename
+        }
+
+        // Handle title picture
+        if (files.titlePicture && files.titlePicture[0]) {
+            updateData.titlePicture = files.titlePicture[0].filename
+        }
+    }
+
     // Add updatedAt timestamp
     updateData.updatedAt = new Date()
 
@@ -317,6 +362,16 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
         }
     }
 
+    // Delete old profile picture if a new one is being uploaded
+    if (updateData.profilePicture && existingUser.profilePicture) {
+        deleteFile(existingUser.profilePicture)
+    }
+
+    // Delete old title picture if a new one is being uploaded
+    if (updateData.titlePicture && existingUser.titlePicture) {
+        deleteFile(existingUser.titlePicture)
+    }
+
     const updatedUser = await User.findOneAndUpdate(
         { userId },
         { $set: updateData },
@@ -330,6 +385,15 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
             },
         },
     )
+
+    // Transform file paths to full URLs for response
+    if (updatedUser?.profilePicture) {
+        updatedUser.profilePicture = `/api/uploads/${updatedUser.profilePicture}`
+    }
+
+    if (updatedUser?.titlePicture) {
+        updatedUser.titlePicture = `/api/uploads/${updatedUser.titlePicture}`
+    }
 
     // Invalidate cache
     await redisClient.del(`users:${userId}`)
@@ -374,6 +438,15 @@ export const deleteUser = asyncHandler(async (req: Request, res: Response) => {
             success: false,
             message: "Confirmation required. Please provide your username to confirm deletion",
         })
+    }
+
+    // Delete associated profile and title pictures
+    if (user.profilePicture) {
+        deleteFile(user.profilePicture)
+    }
+
+    if (user.titlePicture) {
+        deleteFile(user.titlePicture)
     }
 
     // Perform deletion
@@ -943,8 +1016,8 @@ export const deletePost = asyncHandler(async (req: Request, res: Response) => {
  * @access  Private
  */
 export const updatePassword = asyncHandler(async (req: Request, res: Response) => {
-    createRateLimit({ windowMs: 15 * 60 * 1000, max: 5 })(req, res, () => {});
-    
+    createRateLimit({ windowMs: 15 * 60 * 1000, max: 5 })(req, res, () => { })
+
     const { currentPassword, newPassword, confirmPassword } = req.body
     const { userId } = req.params
 
@@ -1014,8 +1087,8 @@ export const updatePassword = asyncHandler(async (req: Request, res: Response) =
  * @access  Private
  */
 export const setupTwoFactorAuth = asyncHandler(async (req: Request, res: Response) => {
-    createRateLimit({ windowMs: 60 * 60 * 1000, max: 3 })(req, res, () => {});
-    
+    createRateLimit({ windowMs: 60 * 60 * 1000, max: 3 })(req, res, () => { })
+
     const { userId } = req.params
 
     if (!userId) {
@@ -1077,8 +1150,8 @@ export const setupTwoFactorAuth = asyncHandler(async (req: Request, res: Respons
  * @access  Private
  */
 export const verifyTwoFactorAuth = asyncHandler(async (req: Request, res: Response) => {
-    createRateLimit({ windowMs: 15 * 60 * 1000, max: 10 })(req, res, () => {});
-    
+    createRateLimit({ windowMs: 15 * 60 * 1000, max: 10 })(req, res, () => { })
+
     const { code } = req.body
     const { userId } = req.params
 
@@ -1199,8 +1272,8 @@ export const disableTwoFactorAuth = asyncHandler(async (req: Request, res: Respo
  * @access  Private
  */
 export const generateRecoveryCodes = asyncHandler(async (req: Request, res: Response) => {
-    createRateLimit({ windowMs: 24 * 60 * 60 * 1000, max: 3 })(req, res, () => {});
-    
+    createRateLimit({ windowMs: 24 * 60 * 60 * 1000, max: 3 })(req, res, () => { })
+
     const { userId } = req.params
 
     if (!userId) {
@@ -1249,8 +1322,8 @@ export const generateRecoveryCodes = asyncHandler(async (req: Request, res: Resp
  * @access  Private
  */
 export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
-    createRateLimit({ windowMs: 15 * 60 * 1000, max: 5 })(req, res, () => {});
-    
+    createRateLimit({ windowMs: 15 * 60 * 1000, max: 5 })(req, res, () => { })
+
     const { userId } = req.params
     const { code } = req.body
 
@@ -1314,61 +1387,61 @@ export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
  * @access  Private
  */
 export const verifyDiscord = asyncHandler(async (req: Request, res: Response) => {
-    createRateLimit({ windowMs: 15 * 60 * 1000, max: 5 })(req, res, () => {});
+    createRateLimit({ windowMs: 15 * 60 * 1000, max: 5 })(req, res, () => { })
 
-    const { userId } = req.params;
-    const { code } = req.body;
+    const { userId } = req.params
+    const { code } = req.body
 
     if (!userId) {
         return res.status(400).json({
             success: false,
             message: "User ID is required",
-        });
+        })
     }
 
     if (!code) {
         return res.status(400).json({
             success: false,
             message: "Verification code is required",
-        });
+        })
     }
 
-    const user = await User.findOne({ userId });
+    const user = await User.findOne({ userId })
 
     if (!user) {
         return res.status(404).json({
             success: false,
             message: "User not found",
-        });
+        })
     }
 
     if (!user.verification) {
         return res.status(400).json({
             success: false,
             message: "No Discord verification code found. Please request a new one.",
-        });
+        })
     }
 
-    const storedCode = user.verification.discord?.code;
+    const storedCode = user.verification.discord?.code
 
     if (!storedCode || storedCode !== code) {
         return res.status(400).json({
             success: false,
             message: "Invalid Discord verification code",
-        });
+        })
     }
 
-    user.verification.discord.verified = true;
-    user.updatedAt = new Date();
+    user.verification.discord.verified = true
+    user.updatedAt = new Date()
 
-    await user.save();
+    await user.save()
 
-    logger.info("Discord account verified successfully", { userId });
+    logger.info("Discord account verified successfully", { userId })
     return res.status(200).json({
         success: true,
         message: "Discord account verified successfully",
-    });
-});
+    })
+})
 
 /**
  * @desc    Verify SMS
@@ -1376,8 +1449,8 @@ export const verifyDiscord = asyncHandler(async (req: Request, res: Response) =>
  * @access  Private
  */
 export const verifySMS = asyncHandler(async (req: Request, res: Response) => {
-    createRateLimit({ windowMs: 15 * 60 * 1000, max: 5 })(req, res, () => {});
-    
+    createRateLimit({ windowMs: 15 * 60 * 1000, max: 5 })(req, res, () => { })
+
     const { userId } = req.params
     const { code } = req.body
 
@@ -1612,9 +1685,8 @@ export const updatePreferences = asyncHandler(async (req: Request, res: Response
  * @access  Private
  */
 export const logoutAllSessions = asyncHandler(async (req: Request, res: Response) => {
-    // Apply rate limiting
-    createRateLimit({ windowMs: 60 * 60 * 1000, max: 3 })(req, res, () => {});
-    
+    createRateLimit({ windowMs: 60 * 60 * 1000, max: 3 })(req, res, () => { })
+
     const { userId } = req.params
     const { confirmPassword } = req.body
 
@@ -1658,3 +1730,33 @@ export const logoutAllSessions = asyncHandler(async (req: Request, res: Response
         message: "Logged out from all other devices successfully",
     })
 })
+
+// Export middleware for file uploads
+export const uploadProfileImages = (req: Request, res: Response, next: Function) => {
+    try {
+        const uploadFields = [
+            { name: "profilePicture", maxCount: 1 },
+            { name: "titlePicture", maxCount: 1 },
+        ]
+
+        // Use the multer service to handle multiple file uploads
+        const uploadMiddleware = (req: Request, res: Response, next: Function) => {
+            uploadFields.forEach((field) => {
+                if (req.body[field.name]) {
+                    uploadSingle(field.name)(req, res, (err: any) => {
+                        if (err) {
+                            logger.error(`Error uploading ${field.name}`, { error: err.message })
+                        }
+                    })
+                }
+            })
+            next()
+        }
+
+        uploadMiddleware(req, res, next)
+    } catch (error) {
+        logger.error("Error in uploadProfileImages middleware", { error })
+        next(error)
+    }
+}
+

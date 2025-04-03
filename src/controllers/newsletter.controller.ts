@@ -3,13 +3,6 @@ import { NewsletterSubscriber, Newsletter } from "../models/Newsletter";
 import { logger } from "../services/logger.service";
 import { sendEmail } from "../services/email.service";
 
-const smtpConfig = {
-    host: process.env.SMTP_HOST || "smtp.example.com",
-    port: Number(process.env.SMTP_PORT) || 465,
-    user: process.env.SMTP_USER || "user@example.com",
-    pass: process.env.SMTP_PASS || "password",
-};
-
 export const subscribeNewsletter: RequestHandler = async (req: Request, res: Response): Promise<void> => {
     try {
         const { email } = req.body;
@@ -77,7 +70,7 @@ export const sendNewsletter: RequestHandler = async (req: Request, res: Response
 
         const emails = subscribers.map((subscriber) => subscriber.email);
         await Promise.all(
-            emails.map(email => sendEmail(smtpConfig, email, newsletter.subject, newsletter.content, newsletter.content))
+            emails.map(email => sendEmail(email, newsletter.subject, newsletter.content, newsletter.content))
         );
 
         newsletter.sentAt = new Date();

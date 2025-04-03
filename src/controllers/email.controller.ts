@@ -11,14 +11,7 @@ export const sendEmailController: RequestHandler = async (req: Request, res: Res
             return;
         }
 
-        const smtpConfig = {
-            host: process.env.SMTP_HOST || '',
-            port: Number(process.env.SMTP_PORT || 587),
-            user: process.env.SMTP_USER || '',
-            pass: process.env.SMTP_PASS || '',
-        };
-
-        const email = await sendEmail(smtpConfig, to, subject, text, html);
+        const email = await sendEmail(to, subject, text, html);
         logger.info("Email sent successfully", { to, subject });
         res.status(200).json({ success: true, email });
     } catch (error: any) {

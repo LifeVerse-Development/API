@@ -19,7 +19,7 @@ export const sendToDiscord = async (message: string, level: 'info' | 'warn' | 'e
 
         const payload = {
             username: 'Logger',
-            avatar_url: 'https://imgur.com/a/XuF0WDL',
+            avatar_url: 'https://imgur.com/sWwpSfV',
             embeds: [
                 {
                     title: `${level.toUpperCase()} - Log Message`,
