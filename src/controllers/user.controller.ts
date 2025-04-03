@@ -388,11 +388,11 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
 
     // Transform file paths to full URLs for response
     if (updatedUser?.profilePicture) {
-        updatedUser.profilePicture = `/api/uploads/${updatedUser.profilePicture}`
+        updatedUser.profilePicture = `http://localhost:3001/api/uploads/${updatedUser.profilePicture}`
     }
 
     if (updatedUser?.titlePicture) {
-        updatedUser.titlePicture = `/api/uploads/${updatedUser.titlePicture}`
+        updatedUser.titlePicture = `http://localhost:3001/api/uploads/${updatedUser.titlePicture}`
     }
 
     // Invalidate cache
