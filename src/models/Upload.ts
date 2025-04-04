@@ -5,6 +5,7 @@ interface IUpload extends Document {
     userId: string;
     filename: string;
     filePath: string;
+    fileUrl: string;
     fileType: string;
     size: number;
     createdAt: Date;
@@ -17,6 +18,7 @@ const uploadSchema = new Schema<IUpload>(
         userId: { type: String, required: true },
         filename: { type: String, required: true },
         filePath: { type: String, required: true },
+        fileUrl: { type: String, required: true },
         fileType: { type: String, required: true },
         size: { type: Number, required: true },
     },

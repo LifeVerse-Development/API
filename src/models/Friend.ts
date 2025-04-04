@@ -8,7 +8,9 @@ export interface IFriend extends Document {
     status: 'pending' | 'accepted' | 'rejected';
     buttonIds?: string[];
     buttonLabels?: string[];
+    respondedAt?: Date;
     timestamp: Date;
+    updatedAt: Date;
 }
 
 const FriendSchema = new Schema<IFriend>({
@@ -19,7 +21,9 @@ const FriendSchema = new Schema<IFriend>({
     status: { type: String, enum: ['pending', 'accepted', 'rejected'], default: 'pending' },
     buttonIds: { type: [String], default: [] },
     buttonLabels: { type: [String], default: [] },
+    respondedAt: { type: Date, default: null },
     timestamp: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
 });
 
 FriendSchema.pre('save', function (next) {
