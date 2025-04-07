@@ -6,7 +6,7 @@ export const jsonErrorHandler: ErrorRequestHandler = (
     err: SyntaxError | any,
     _req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
 ): void | Promise<void> => {
     if (err instanceof SyntaxError && 'body' in err) {
         logger.error('JSON Parsing Error: Invalid JSON format received.', { message: err.message, stack: err.stack });
@@ -25,7 +25,7 @@ export const globalErrorHandler: ErrorRequestHandler = (
     err: any,
     _req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
 ): void | Promise<void> => {
     logger.error('Unhandled Server Error:', { message: err.message, stack: err.stack });
 
@@ -34,12 +34,10 @@ export const globalErrorHandler: ErrorRequestHandler = (
     }
 
     const statusCode = err.status || 500;
-    const errorMessage = application.env === 'production'
-        ? 'An unexpected error occurred. Please try again later.'
-        : err.message;
+    const errorMessage = application.env === 'production' ? 'An unexpected error occurred. Please try again later.' : err.message;
 
     res.status(statusCode).json({
         error: errorMessage,
-        ...(application.env !== 'production' ? { stack: err.stack } : {})
+        ...(application.env !== 'production' ? { stack: err.stack } : {}),
     });
 };

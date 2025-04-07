@@ -8,5 +8,5 @@ export const discord = {
     callbackUrl: String(process.env.DISCORD_CALLBACK_URL),
     webhook: {
         logUrl: String(process.env.DISCORD_LOG_WEBHOOK_URL),
-    }
-}
+    },
+};

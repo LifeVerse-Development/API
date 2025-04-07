@@ -1,12 +1,13 @@
-import { Schema, model, Document } from 'mongoose';
+import { Schema, model, type Document } from "mongoose"
 
-interface IEmail extends Document {
-    identifier: string;
-    to: string;
-    subject: string;
-    text: string;
-    html: string;
-    sentAt: Date;
+export interface IEmail extends Document {
+    identifier: string
+    to: string
+    subject: string
+    text: string
+    html: string
+    profilePicture?: string
+    sentAt: Date
 }
 
 const emailSchema = new Schema<IEmail>({
@@ -15,14 +16,16 @@ const emailSchema = new Schema<IEmail>({
     subject: { type: String, required: true },
     text: { type: String, required: true },
     html: { type: String, required: true },
+    profilePicture: { type: String },
     sentAt: { type: Date, default: Date.now },
-});
+})
 
-emailSchema.pre('save', function (next) {
+emailSchema.pre("save", function (next) {
     if (!this.identifier) {
-        this.identifier = Math.random().toString(36).substring(2, 15);
+        this.identifier = Math.random().toString(36).substring(2, 15)
     }
-    next();
-});
+    next()
+})
 
-export const Email = model<IEmail>("Email", emailSchema);
+export const Email = model<IEmail>("Email", emailSchema)
+

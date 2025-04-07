@@ -2,8 +2,11 @@ import { Router } from 'express';
 import { createApiKey, getAllApiKeys, getApiKeyById, updateApiKey, deleteApiKey } from '../controllers/apikey.controller';
 import { hasRole } from '../middlewares/authorization.middleware';
 import { isAuthenticated } from '../middlewares/authentication.middleware';
+import { cacheMiddleware } from '../middlewares/cache.middleware';
 
 const router = Router();
+
+router.use(cacheMiddleware());
 
 router.post('/', isAuthenticated, hasRole('Admin', 'Moderator', 'Developer'), createApiKey);
 router.get('/', isAuthenticated, hasRole('Admin', 'Moderator', 'Developer', 'Content', 'Supporter'), getAllApiKeys);

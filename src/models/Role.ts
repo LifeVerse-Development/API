@@ -9,12 +9,15 @@ export interface IRole extends Document {
     updatedAt: Date;
 }
 
-const roleSchema = new Schema<IRole>({
-    identifier: { type: String, required: true, unique: true },
-    color: { type: String, required: true },
-    name: { type: String, required: true, unique: true },
-    permissions: { type: [String], default: [] },
-}, { timestamps: true });
+const roleSchema = new Schema<IRole>(
+    {
+        identifier: { type: String, required: true, unique: true },
+        color: { type: String, required: true },
+        name: { type: String, required: true, unique: true },
+        permissions: { type: [String], default: [] },
+    },
+    { timestamps: true },
+);
 
 roleSchema.pre('save', function (next) {
     if (!this.identifier) {

@@ -1,114 +1,268 @@
-import { Request, Response, RequestHandler } from 'express';
-import { History } from '../models/History';
-import { logger } from '../services/logger.service';
+import type { Request, Response, RequestHandler } from "express"
+import { History } from "../models/History"
+import { logger } from "../services/logger.service"
+import { asyncHandler } from "../utils/asyncHandler.util"
+import { invalidateCache } from "../middlewares/cache.middleware"
 
-export const createHistory: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { userId, action, description, details } = req.body;
+// Cache key patterns for better cache management
+const CACHE_KEYS = {
+    ALL_HISTORY: "history:all",
+    HISTORY_BY_ID: (id: string) => `history:${id}`,
+    HISTORY_BY_USER: (userId: string) => `history:user:${userId}`,
+    HISTORY_BY_ACTION: (action: string) => `history:action:${action}`,
+}
 
-        const newHistory = new History({
-            identifier: Math.random().toString(36).substring(2, 15),
-            userId,
-            action,
-            description,
-            details,
-        });
+/**
+ * @desc    Create a new history record
+ * @route   POST /api/history
+ * @access  Private
+ */
+export const createHistory: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { userId, action, description, details } = req.body
 
-        await newHistory.save();
-        logger.info('New history record created', { historyId: newHistory._id, userId });
-        res.status(201).json({ message: 'History created successfully', history: newHistory });
-    } catch (error: any) {
-        logger.error('Error creating history record', { error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Failed to create history', error: error.message });
+    // Validate required fields
+    if (!userId || !action) {
+        logger.warn("Missing required fields for history creation", { userId, action })
+        res.status(400).json({ message: "User ID and action are required" })
+        return
     }
-};
 
-export const getAllHistory: RequestHandler = async (_req: Request, res: Response): Promise<void> => {
-    try {
-        const histories = await History.find();
-        logger.info('Fetched all history records', { count: histories.length });
-        res.status(200).json(histories);
-    } catch (error: any) {
-        logger.error('Error fetching history records', { error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Failed to retrieve history', error: error.message });
+    // Create history record with unique identifier
+    const newHistory = new History({
+        identifier: Math.random().toString(36).substring(2, 15),
+        userId,
+        action,
+        description: description || "",
+        details: details || {},
+        timestamp: new Date(),
+        status: "unread",
+    })
+
+    await newHistory.save()
+
+    // Invalidate relevant caches
+    await invalidateCache([
+        CACHE_KEYS.ALL_HISTORY,
+        CACHE_KEYS.HISTORY_BY_USER(userId),
+        CACHE_KEYS.HISTORY_BY_ACTION(action),
+    ])
+
+    logger.info("New history record created", { historyId: newHistory._id, userId, action })
+    res.status(201).json({ message: "History created successfully", history: newHistory })
+})
+
+/**
+ * @desc    Get all history records with pagination and filtering
+ * @route   GET /api/history
+ * @access  Private/Admin
+ */
+export const getAllHistory: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    // Add pagination support
+    const page = Number(req.query.page) || 1
+    const limit = Number(req.query.limit) || 50
+    const skip = (page - 1) * limit
+
+    // Add filtering options
+    const filter: any = {}
+
+    if (req.query.action) {
+        filter.action = req.query.action
     }
-};
 
-export const getHistoryById: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { historyId } = req.params;
-        const history = await History.findById(historyId);
+    if (req.query.status) {
+        filter.status = req.query.status
+    }
 
-        if (!history) {
-            logger.warn('History record not found', { historyId: historyId });
-            res.status(404).json({ message: 'History not found' });
-            return;
+    if (req.query.startDate && req.query.endDate) {
+        filter.timestamp = {
+            $gte: new Date(req.query.startDate as string),
+            $lte: new Date(req.query.endDate as string),
         }
-
-        logger.info('Fetched history record by ID', { historyId: history._id });
-        res.status(200).json(history);
-    } catch (error: any) {
-        logger.error('Error fetching history record by ID', { error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Failed to retrieve history', error: error.message });
     }
-};
 
-export const getHistoryByUserId: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { userId } = req.params;
-        const histories = await History.find({ userId });
+    // Use lean() and exec() for better performance
+    const histories = await History.find(filter).sort({ timestamp: -1 }).skip(skip).limit(limit).lean().exec()
 
-        if (!histories.length) {
-            logger.warn('No history found for user', { userId });
-            res.status(404).json({ message: 'No history found for this user' });
-            return;
-        }
+    const total = await History.countDocuments(filter)
 
-        logger.info('Fetched history records for user', { userId, count: histories.length });
-        res.status(200).json(histories);
-    } catch (error: any) {
-        logger.error('Error fetching history records for user', { error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Failed to retrieve history', error: error.message });
+    logger.info("Fetched all history records", { count: histories.length, page, limit })
+    res.status(200).json({
+        histories,
+        pagination: {
+            total,
+            page,
+            pages: Math.ceil(total / limit),
+            limit,
+        },
+    })
+})
+
+/**
+ * @desc    Get history record by ID
+ * @route   GET /api/history/:historyId
+ * @access  Private
+ */
+export const getHistoryById: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { historyId } = req.params
+
+    // Use lean() for better performance
+    const history = await History.findById(historyId).lean().exec()
+
+    if (!history) {
+        logger.warn("History record not found", { historyId })
+        res.status(404).json({ message: "History not found" })
+        return
     }
-};
 
-export const deleteHistory: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { historyId } = req.params;
-        const history = await History.findByIdAndDelete(historyId);
+    logger.info("Fetched history record by ID", { historyId: history._id })
+    res.status(200).json(history)
+})
 
-        if (!history) {
-            logger.warn('History record not found for deletion', { historyId: historyId });
-            res.status(404).json({ message: 'History not found' });
-            return;
-        }
+/**
+ * @desc    Get history records by user ID with pagination
+ * @route   GET /api/history/user/:userId
+ * @access  Private
+ */
+export const getHistoryByUserId: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { userId } = req.params
 
-        logger.info('History record deleted successfully', { historyId: history._id });
-        res.status(200).json({ message: 'History deleted successfully' });
-    } catch (error: any) {
-        logger.error('Error deleting history record', { error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Failed to delete history', error: error.message });
+    // Add pagination support
+    const page = Number(req.query.page) || 1
+    const limit = Number(req.query.limit) || 20
+    const skip = (page - 1) * limit
+
+    // Add filtering options
+    const filter: any = { userId }
+
+    if (req.query.status) {
+        filter.status = req.query.status
     }
-};
 
-export const markAsRead: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { historyId } = req.params;
-        const history = await History.findById(historyId);
+    // Use lean() and exec() for better performance
+    const histories = await History.find(filter).sort({ timestamp: -1 }).skip(skip).limit(limit).lean().exec()
 
-        if (!history) {
-            logger.warn('History record not found for mark as read', { historyId: historyId });
-            res.status(404).json({ message: 'History not found' });
-            return;
-        }
+    const total = await History.countDocuments(filter)
 
-        history.status = 'read';
-        await history.save();
-
-        logger.info('History marked as read', { historyId: history._id });
-        res.status(200).json({ message: 'History marked as read', history });
-    } catch (error: any) {
-        logger.error('Error marking history as read', { error: error.message, stack: error.stack });
-        res.status(500).json({ message: 'Failed to mark history as read', error: error.message });
+    if (total === 0) {
+        logger.warn("No history found for user", { userId })
+        res.status(404).json({ message: "No history found for this user" })
+        return
     }
-};
+
+    logger.info("Fetched history records for user", { userId, count: histories.length })
+    res.status(200).json({
+        histories,
+        pagination: {
+            total,
+            page,
+            pages: Math.ceil(total / limit),
+            limit,
+        },
+    })
+})
+
+/**
+ * @desc    Delete history record
+ * @route   DELETE /api/history/:historyId
+ * @access  Private/Admin
+ */
+export const deleteHistory: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { historyId } = req.params
+
+    // Use findOneAndDelete for better performance
+    const history = await History.findByIdAndDelete(historyId).lean().exec()
+
+    if (!history) {
+        logger.warn("History record not found for deletion", { historyId })
+        res.status(404).json({ message: "History not found" })
+        return
+    }
+
+    // Invalidate relevant caches
+    await invalidateCache([
+        CACHE_KEYS.ALL_HISTORY,
+        CACHE_KEYS.HISTORY_BY_ID(historyId),
+        CACHE_KEYS.HISTORY_BY_USER(history.userId),
+        CACHE_KEYS.HISTORY_BY_ACTION(history.action),
+    ])
+
+    logger.info("History record deleted successfully", { historyId: history._id })
+    res.status(200).json({ message: "History deleted successfully" })
+})
+
+/**
+ * @desc    Mark history record as read
+ * @route   PATCH /api/history/:historyId/read
+ * @access  Private
+ */
+export const markAsRead: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { historyId } = req.params
+
+    // Use direct update for better performance
+    const result = await History.updateOne({ _id: historyId }, { $set: { status: "read", readAt: new Date() } })
+
+    if (result.matchedCount === 0) {
+        logger.warn("History record not found for mark as read", { historyId })
+        res.status(404).json({ message: "History not found" })
+        return
+    }
+
+    // Get updated history to return in response
+    const history = await History.findById(historyId).lean().exec()
+
+    // Invalidate relevant caches
+    await invalidateCache([
+        CACHE_KEYS.ALL_HISTORY,
+        CACHE_KEYS.HISTORY_BY_ID(historyId),
+        CACHE_KEYS.HISTORY_BY_USER(history?.userId as string),
+    ])
+
+    logger.info("History marked as read", { historyId })
+    res.status(200).json({ message: "History marked as read", history })
+})
+
+/**
+ * @desc    Mark all user history as read
+ * @route   PATCH /api/history/user/:userId/read-all
+ * @access  Private
+ */
+export const markAllAsRead: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { userId } = req.params
+
+    // Use direct update for better performance
+    const result = await History.updateMany(
+        { userId, status: "unread" },
+        { $set: { status: "read", readAt: new Date() } },
+    )
+
+    // Invalidate relevant caches
+    await invalidateCache([CACHE_KEYS.ALL_HISTORY, CACHE_KEYS.HISTORY_BY_USER(userId)])
+
+    logger.info("All history marked as read for user", { userId, count: result.modifiedCount })
+    res.status(200).json({
+        message: "All history marked as read",
+        count: result.modifiedCount,
+    })
+})
+
+/**
+ * @desc    Delete all history for a user
+ * @route   DELETE /api/history/user/:userId
+ * @access  Private/Admin
+ */
+export const deleteUserHistory: RequestHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { userId } = req.params
+
+    // Use direct delete for better performance
+    const result = await History.deleteMany({ userId })
+
+    // Invalidate relevant caches
+    await invalidateCache([CACHE_KEYS.ALL_HISTORY, CACHE_KEYS.HISTORY_BY_USER(userId)])
+
+    logger.info("All history deleted for user", { userId, count: result.deletedCount })
+    res.status(200).json({
+        message: "All history deleted for user",
+        count: result.deletedCount,
+    })
+})
+

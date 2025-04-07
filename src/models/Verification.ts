@@ -12,15 +12,18 @@ interface IVerification extends Document {
     updatedAt: Date;
 }
 
-const verificationSchema = new Schema<IVerification>({
-    identifier: { type: String, required: true, unique: true },
-    userId: { type: String, required: true, unique: true },
-    guildId: { type: String, required: false, default: '' },
-    lifeVerseUrl: { type: String, required: true },
-    lifeVerseUsername: { type: String, required: true },
-    code: { type: String, required: true },
-    verified: { type: Boolean, default: false },
-}, { timestamps: true });
+const verificationSchema = new Schema<IVerification>(
+    {
+        identifier: { type: String, required: true, unique: true },
+        userId: { type: String, required: true, unique: true },
+        guildId: { type: String, required: false, default: '' },
+        lifeVerseUrl: { type: String, required: true },
+        lifeVerseUsername: { type: String, required: true },
+        code: { type: String, required: true },
+        verified: { type: Boolean, default: false },
+    },
+    { timestamps: true },
+);
 
 verificationSchema.pre('save', function (next) {
     if (!this.identifier) {

@@ -1,49 +1,46 @@
-import { Schema, model, Document } from 'mongoose';
+import mongoose, { Schema, type Document } from "mongoose"
 
-export interface IChat extends Document {
-    identifier: string;
-    participants: Schema.Types.ObjectId[];
-    messages: IMessage[];
-    chatType: 'group' | 'one-to-one';
-    groupName?: string;
-    createdAt: Date;
-    updatedAt: Date;
+interface IMessage {
+    identifier: string
+    sender: string
+    content: string
+    timestamp: Date
 }
 
-export interface IMessage {
-    identifier: string;
-    sender: Schema.Types.ObjectId;
-    content: string;
-    timestamp: Date;
+export interface IChat extends Document {
+    identifier: string
+    name: string
+    participants: mongoose.Types.ObjectId[]
+    messages: IMessage[]
+    lastMessage?: IMessage
+    createdAt: Date
+    updatedAt: Date
 }
 
 const messageSchema = new Schema<IMessage>({
-    identifier: { type: String, required: true, unique: true },
-    sender: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    identifier: { type: String, required: true },
+    sender: { type: String, required: true },
     content: { type: String, required: true },
-    timestamp: { type: Date, default: Date.now }
-});
+    timestamp: { type: Date, default: Date.now },
+})
 
-const chatSchema = new Schema<IChat>({
-    identifier: { type: String, required: true, unique: true },
-    participants: [{ type: Schema.Types.ObjectId, ref: 'User', required: true }],
-    messages: [messageSchema],
-    chatType: { type: String, enum: ['group', 'one-to-one'], required: true },
-    groupName: { type: String },
-}, { timestamps: true });
+const chatSchema = new Schema<IChat>(
+    {
+        identifier: { type: String, required: true, unique: true },
+        name: { type: String, required: true },
+        participants: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+        messages: [messageSchema],
+        lastMessage: { type: messageSchema, required: false },
+    },
+    { timestamps: true },
+)
 
-messageSchema.pre('save', function (next) {
+chatSchema.pre("save", function (next) {
     if (!this.identifier) {
-        this.identifier = Math.random().toString(36).substring(2, 15);
+        this.identifier = Math.random().toString(36).substring(2, 15)
     }
-    next();
-});
+    next()
+})
 
-chatSchema.pre('save', function (next) {
-    if (!this.identifier) {
-        this.identifier = Math.random().toString(36).substring(2, 15);
-    }
-    next();
-});
+export const Chat = mongoose.model<IChat>("Chat", chatSchema)
 
-export const Chat = model<IChat>('Chat', chatSchema);

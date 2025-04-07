@@ -1,122 +1,156 @@
-import { Request, Response, RequestHandler } from 'express';
-import { Verification } from '../models/Verification';
-import { logger } from '../services/logger.service';
+import type { Request, Response, RequestHandler } from "express"
+import { Verification } from "../models/Verification"
+import { logger } from "../services/logger.service"
+import { invalidateCache } from "../middlewares/cache.middleware"
+import { asyncHandler } from "../utils/asyncHandler.util"
 
-export const getAllVerifications: RequestHandler = async (_req: Request, res: Response): Promise<void> => {
-    try {
-        const verifications = await Verification.find();
+// Cache key patterns for better cache management
+const CACHE_KEYS = {
+    ALL_VERIFICATIONS: "verifications:all",
+    USER_VERIFICATION: (userId: string) => `verifications:${userId}`,
+    USER_STATUS: (userId: string) => `verifications:status:${userId}`,
+}
 
-        if (!verifications || verifications.length === 0) {
-            logger.warn('No verifications found.');
-            res.status(404).json({ message: "No verifications found" });
-            return;
-        }
+/**
+ * @desc    Get all verifications
+ * @route   GET /api/verifications
+ * @access  Private/Admin
+ */
+export const getAllVerifications: RequestHandler = asyncHandler(async (_req: Request, res: Response) => {
+    // Use lean() for better performance on read operations
+    const verifications = await Verification.find().lean().exec()
 
-        logger.info('Fetched all verifications successfully.');
-        res.status(200).json({ verifications });
-    } catch (error: any) {
-        logger.error(`Fetching all verifications failed: ${error.message}`, { stack: error.stack });
-        res.status(500).json({ message: "Internal server error" });
+    if (!verifications || verifications.length === 0) {
+        logger.warn("No verifications found.")
+        return res.status(404).json({ message: "No verifications found" })
     }
-};
 
-export const getVerificationById: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    const { userId } = req.params;
+    logger.info("Fetched all verifications successfully.", { count: verifications.length })
+    return res.status(200).json({ verifications })
+})
 
-    try {
-        const verification = await Verification.findOne({ userId });
+/**
+ * @desc    Get verification by user ID
+ * @route   GET /api/verifications/:userId
+ * @access  Private
+ */
+export const getVerificationById: RequestHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { userId } = req.params
 
-        if (!verification) {
-            logger.warn(`Verification not found for user ${userId}.`);
-            res.status(404).json({ message: "Verification not found" });
-            return;
-        }
-
-        logger.info(`Fetched verification status for user ${userId}.`);
-        res.status(200).json({ verification });
-    } catch (error: any) {
-        logger.error(`Fetching verification failed: ${error.message}`, { stack: error.stack });
-        res.status(500).json({ message: "Internal server error" });
+    if (!userId) {
+        return res.status(400).json({ message: "User ID is required" })
     }
-};
 
-export const deleteVerification: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    const { userId } = req.params;
+    // Use lean() for better performance
+    const verification = await Verification.findOne({ userId }).lean().exec()
 
-    try {
-        const verification = await Verification.findOneAndDelete({ userId });
-
-        if (!verification) {
-            logger.warn(`Verification not found for user ${userId}.`);
-            res.status(404).json({ message: "Verification not found" });
-            return;
-        }
-
-        logger.info(`Deleted verification for user ${userId}.`);
-        res.status(200).json({ message: "Verification deleted successfully" });
-    } catch (error: any) {
-        logger.error(`Deleting verification failed: ${error.message}`, { stack: error.stack });
-        res.status(500).json({ message: "Internal server error" });
+    if (!verification) {
+        logger.warn(`Verification not found for user ${userId}.`)
+        return res.status(404).json({ message: "Verification not found" })
     }
-};
 
-export const verifyUser: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { userId, code } = req.body;
+    logger.info(`Fetched verification status for user ${userId}.`)
+    return res.status(200).json({ verification })
+})
 
-        if (!userId || !code) {
-            logger.warn("Verification failed: Missing required fields.");
-            res.status(400).json({ message: "Missing required fields" });
-            return;
-        }
+/**
+ * @desc    Delete verification
+ * @route   DELETE /api/verifications/:userId
+ * @access  Private/Admin
+ */
+export const deleteVerification: RequestHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { userId } = req.params
 
-        const verification = await Verification.findOne({ userId });
-
-        if (!verification) {
-            logger.warn(`Verification failed: No verification found for user ${userId}.`);
-            res.status(400).json({ message: "No verification found" });
-            return;
-        }
-
-        if (verification.code !== code) {
-            logger.warn(`Verification failed: Invalid code for user ${userId}.`);
-            res.status(400).json({ message: "Invalid verification code" });
-            return;
-        }
-
-        if (verification.verified) {
-            logger.warn(`Verification failed: User ${userId} is already verified.`);
-            res.status(400).json({ message: "User is already verified" });
-            return;
-        }
-
-        verification.verified = true;
-        await verification.save();
-
-        logger.info(`User ${userId} successfully verified.`);
-        res.status(200).json({ message: "Verification successful", verification });
-    } catch (error: any) {
-        logger.error(`User verification failed: ${error.message}`, { stack: error.stack });
-        res.status(500).json({ message: "Internal server error" });
+    if (!userId) {
+        return res.status(400).json({ message: "User ID is required" })
     }
-};
 
-export const getVerificationStatus: RequestHandler = async (req: Request, res: Response): Promise<void> => {
-    const { userId } = req.params;
+    // Use deleteOne instead of findOneAndDelete for better performance
+    const result = await Verification.deleteOne({ userId })
 
-    try {
-        const verification = await Verification.findOne({ userId });
-
-        if (!verification) {
-            logger.warn(`Fetching verification status failed: No verification found for user ${userId}.`);
-            res.status(404).json({ message: "Verification not found" });
-            return;
-        }
-
-        logger.info(`Fetched verification status successfully for user ${userId}.`);
-        res.status(200).json({ verified: verification.verified });
-    } catch (error: any) {
-        logger.error(`Fetching verification status failed: ${error.message}`, { stack: error.stack });
-        res.status(500).json({ message: "Internal server error" });
+    if (result.deletedCount === 0) {
+        logger.warn(`Verification not found for user ${userId}.`)
+        return res.status(404).json({ message: "Verification not found" })
     }
-};
+
+    // Use more specific cache keys for better invalidation
+    await invalidateCache([
+        CACHE_KEYS.USER_VERIFICATION(userId),
+        CACHE_KEYS.USER_STATUS(userId),
+        CACHE_KEYS.ALL_VERIFICATIONS,
+    ])
+
+    logger.info(`Deleted verification for user ${userId}.`)
+    return res.status(200).json({ message: "Verification deleted successfully" })
+})
+
+/**
+ * @desc    Get verification status
+ * @route   GET /api/verifications/:userId/status
+ * @access  Private
+ */
+export const getVerificationStatus: RequestHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { userId } = req.params
+
+    if (!userId) {
+        return res.status(400).json({ message: "User ID is required" })
+    }
+
+    // Use projection to only get the verified field for better performance
+    const verification = await Verification.findOne({ userId }, { verified: 1 }).lean().exec()
+
+    if (!verification) {
+        logger.warn(`Fetching verification status failed: No verification found for user ${userId}.`)
+        return res.status(404).json({ message: "Verification not found" })
+    }
+
+    logger.info(`Fetched verification status successfully for user ${userId}.`)
+    return res.status(200).json({ verified: verification.verified })
+})
+
+/**
+ * @desc    Create or update verification
+ * @route   POST /api/verifications
+ * @access  Private/Admin
+ */
+export const createOrUpdateVerification: RequestHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { userId, verified, verificationDate, verificationMethod } = req.body
+
+    if (!userId) {
+        return res.status(400).json({ message: "User ID is required" })
+    }
+
+    // Use updateOne with upsert for better performance
+    const result = await Verification.updateOne(
+        { userId },
+        {
+            $set: {
+                userId,
+                verified: verified !== undefined ? verified : false,
+                verificationDate: verificationDate || new Date(),
+                verificationMethod: verificationMethod || "manual",
+                updatedAt: new Date(),
+            },
+        },
+        { upsert: true },
+    )
+
+    const isNew = result.upsertedCount > 0
+
+    // Use more specific cache keys for better invalidation
+    await invalidateCache([
+        CACHE_KEYS.USER_VERIFICATION(userId),
+        CACHE_KEYS.USER_STATUS(userId),
+        CACHE_KEYS.ALL_VERIFICATIONS,
+    ])
+
+    // Get the updated verification to return in the response
+    const verification = await Verification.findOne({ userId }).lean().exec()
+
+    logger.info(`Verification ${isNew ? "created" : "updated"} for user ${userId}.`)
+    return res.status(200).json({
+        message: `Verification ${isNew ? "created" : "updated"} successfully`,
+        verification,
+    })
+})
+

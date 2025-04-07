@@ -9,10 +9,10 @@ import { Server } from 'socket.io';
 import { application } from './configs/application.config';
 import { connectDB } from './database/connectDB';
 import { jsonErrorHandler, notFoundHandler, globalErrorHandler } from './middlewares/errorHandler.middleware';
-import { SocketIOService } from './services/socketio.service';
+import { initializeSocket } from './services/socketio.service';
+import { logger } from './services/logger.service';
 import { bodyParserMiddleware, bodyParserErrorHandler } from './middlewares/bodyParser.middleware';
 import { corsMiddleware } from './middlewares/cors.middleware';
-import { rateLimitMiddleware } from './middlewares/rateLimit.middleware';
 import { maintenanceMiddleware } from './middlewares/maintenance.middleware';
 //import { csrfMiddleware } from './middlewares/csrf.middleware';
 import { loggerMiddleware } from './middlewares/logger.middleware';
@@ -37,6 +37,9 @@ import emailRouter from './routes/email.router';
 import contactRouter from './routes/contact.router';
 import historyRouter from './routes/history.router';
 import uploadRouter from './routes/upload.router';
+import ticketRouter from './routes/ticket.router';
+import newsletterRouter from './routes/newsletter.router';
+import productRouter from './routes/product.router';
 
 const app = express();
 const server = createServer(app);
@@ -47,11 +50,11 @@ const io = new Server(server, {
     cors: {
         origin: ['https://www.lifeversegame.com', 'https://localhost:3000', 'http://localhost:3001'],
         methods: ['GET', 'POST', 'UPDATE', 'DELETE', 'PATCH', 'OPTIONS'],
-        credentials: true
-    }
+        credentials: true,
+    },
 });
 
-const socketService = new SocketIOService(io);
+const socketService = initializeSocket(io);
 
 const PORT = application.port || 3000;
 
@@ -65,21 +68,22 @@ app.use(bodyParserErrorHandler);
 app.use(corsMiddleware);
 app.use(slowDownMiddleware());
 //app.use(csrfMiddleware());
-app.use(rateLimitMiddleware());
 app.use(loggerMiddleware());
 app.use(compressionMiddleware());
 app.use(logHeaderMiddleware());
 app.use(maintenanceMiddleware());
-app.use(session({
-    secret: 'some random secret',
-    cookie: {
-        maxAge: 60000 * 60 * 24,
-        secure: false
-    },
-    resave: false,
-    saveUninitialized: false,
-    name: 'discord-oauth2'
-}));
+app.use(
+    session({
+        secret: 'some random secret',
+        cookie: {
+            maxAge: 60000 * 60 * 24,
+            secure: false,
+        },
+        resave: false,
+        saveUninitialized: false,
+        name: 'discord-oauth2',
+    }),
+);
 
 app.use(passport.initialize());
 app.use(passport.session());
@@ -96,7 +100,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/sms', smsRouter);
 app.use('/api/roles', roleRouter);
 app.use('/api/users', userRouter);
-app.use('/api/verifications', verificationRouter)
+app.use('/api/verifications', verificationRouter);
 app.use('/api/friends', friendRouter);
 app.use('/api/payments', paymentRouter);
 app.use('/api/blogs', blogRouter);
@@ -104,6 +108,9 @@ app.use('/api/emails', emailRouter);
 app.use('/api/contacts', contactRouter);
 app.use('/api/histories', historyRouter);
 app.use('/api/uploads', uploadRouter);
+app.use('/api/tickets', ticketRouter);
+app.use('/api/newsletters', newsletterRouter);
+app.use('/api/products', productRouter);
 
 // Error handling middleware
 app.use(jsonErrorHandler);
@@ -114,7 +121,7 @@ app.use(globalErrorHandler);
 // START SERVER
 // ========================
 server.listen(PORT, () => {
-    console.log(`API is running securely with WebSockets on port ${PORT}`);
+    logger.info(`API is running securely with WebSockets on port ${PORT}`);
     socketService;
 });
 

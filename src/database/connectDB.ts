@@ -21,7 +21,7 @@ export const connectDB = async (): Promise<void> => {
             logger.info('MongoDB connection established');
         });
 
-        mongoose.connection.on('error', (err) => {
+        mongoose.connection.on('error', err => {
             logger.error('MongoDB connection error:', err);
             process.exit(1);
         });
@@ -39,7 +39,6 @@ export const connectDB = async (): Promise<void> => {
             logger.info('MongoDB connection closed due to application termination');
             process.exit(0);
         });
-
     } catch (err: any) {
         logger.error('Critical MongoDB connection failure:', err);
         process.exit(1);

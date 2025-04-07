@@ -11,14 +11,17 @@ interface IHistory extends Document {
     updatedAt: Date;
 }
 
-const historySchema = new Schema<IHistory>({
-    identifier: { type: String, required: true, unique: true },
-    userId: { type: String, required: true },
-    action: { type: String, required: true },
-    description: { type: String, required: true },
-    details: { type: String, default: '' },
-    status: { type: String, enum: ['read', 'unread'], default: 'unread' },
-}, { timestamps: true });
+const historySchema = new Schema<IHistory>(
+    {
+        identifier: { type: String, required: true, unique: true },
+        userId: { type: String, required: true },
+        action: { type: String, required: true },
+        description: { type: String, required: true },
+        details: { type: String, default: '' },
+        status: { type: String, enum: ['read', 'unread'], default: 'unread' },
+    },
+    { timestamps: true },
+);
 
 historySchema.pre('save', function (next) {
     if (!this.identifier) {

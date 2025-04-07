@@ -13,14 +13,17 @@ export interface IApiKey extends Document {
     isExpired: () => boolean;
 }
 
-const apiKeySchema = new Schema<IApiKey>({
-    identifier: { type: String, required: true, unique: true },
-    name: { type: String, required: true },
-    key: { type: String, required: true, unique: true },
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    expiresAt: { type: Date, required: true },
-    isActive: { type: Boolean, default: true },
-}, { timestamps: true });
+const apiKeySchema = new Schema<IApiKey>(
+    {
+        identifier: { type: String, required: true, unique: true },
+        name: { type: String, required: true },
+        key: { type: String, required: true, unique: true },
+        user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+        expiresAt: { type: Date, required: true },
+        isActive: { type: Boolean, default: true },
+    },
+    { timestamps: true },
+);
 
 apiKeySchema.methods.deactivate = async function () {
     this.isActive = false;

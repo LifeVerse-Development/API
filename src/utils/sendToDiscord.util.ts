@@ -14,29 +14,28 @@ export const sendToDiscord = async (message: string, level: 'info' | 'warn' | 'e
         const colors = {
             info: 0x00ff00,
             warn: 0xffff00,
-            error: 0xff0000
+            error: 0xff0000,
         };
 
         const payload = {
             username: 'Logger',
-            avatar_url: 'https://imgur.com/a/XuF0WDL',
+            avatar_url: 'https://imgur.com/sWwpSfV',
             embeds: [
                 {
                     title: `${level.toUpperCase()} - Log Message`,
                     description: message,
                     color: colors[level] || 0x000000,
                     timestamp: new Date().toISOString(),
-                }
-            ]
+                },
+            ],
         };
 
         await axios.post(DISCORD_WEBHOOK_URL, payload, { timeout: 5000 });
-
     } catch (error: any) {
         logger.error('Error sending log to Discord:', {
             message: error.message,
             stack: error.stack,
-            responseData: error.response?.data
+            responseData: error.response?.data,
         });
     }
 };

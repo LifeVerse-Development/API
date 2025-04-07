@@ -16,7 +16,7 @@ export const csrfMiddleware = (cookieOptions: object = getCookieOptions(applicat
         csurf({ cookie: cookieOptions }),
         (req: Request, res: Response, next: NextFunction) => {
             if (!req.cookies.csrfToken) {
-                res.cookie('X-CSRF-TOKEN', req.csrfToken(), cookieOptions);
+                res.cookie('csrfToken', req.csrfToken(), cookieOptions);
             }
             next();
         },

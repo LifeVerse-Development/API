@@ -10,13 +10,16 @@ interface ISms extends Document {
     updatedAt: Date;
 }
 
-const SmsSchema = new Schema<ISms>({
-    identifier: { type: String, required: true, unique: true },
-    phoneNumber: { type: String, required: true },
-    message: { type: String, required: true },
-    sentAt: { type: Date, required: true },
-    status: { type: String, enum: ['sent', 'scheduled'], default: 'sent' },
-}, { timestamps: true });
+const SmsSchema = new Schema<ISms>(
+    {
+        identifier: { type: String, required: true, unique: true },
+        phoneNumber: { type: String, required: true },
+        message: { type: String, required: true },
+        sentAt: { type: Date, required: true },
+        status: { type: String, enum: ['sent', 'scheduled'], default: 'sent' },
+    },
+    { timestamps: true },
+);
 
 SmsSchema.pre('save', function (next) {
     if (!this.identifier) {

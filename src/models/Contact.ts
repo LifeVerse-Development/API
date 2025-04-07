@@ -7,16 +7,21 @@ interface IContact extends Document {
     phone: string;
     message: string;
     replied: boolean;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
-const contactSchema = new Schema<IContact>({
-    identifier: { type: String, required: true, unique: true },
-    name: { type: String, required: true },
-    email: { type: String, required: true },
-    phone: { type: String, required: true },
-    message: { type: String, required: true },
-    replied: { type: Boolean, required: true }
-}, { timestamps: true });
+const contactSchema = new Schema<IContact>(
+    {
+        identifier: { type: String, required: true, unique: true },
+        name: { type: String, required: true },
+        email: { type: String, required: true },
+        phone: { type: String, required: true },
+        message: { type: String, required: true },
+        replied: { type: Boolean, required: true },
+    },
+    { timestamps: true },
+);
 
 contactSchema.pre('save', function (next) {
     if (!this.identifier) {
